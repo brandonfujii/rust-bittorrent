@@ -1,6 +1,8 @@
 [package]
 name = "bittorrent"
 version = "0.1.0"
-authors = ["Josh Shi <thehandsomepanther@gmail.com>"]
+authors = ["Josh Shi <thehandsomepanther@gmail.com>", "Brandon Fujii <brandonkfujii@gmail.com>"]
 
 [dependencies]
+bencode = "0.1.16"
+rustc-serialize = "0.3.24"
