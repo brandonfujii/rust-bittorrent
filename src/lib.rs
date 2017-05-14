@@ -1,9 +1,9 @@
 extern crate rustc_serialize;
 extern crate bencode;
 
-use rustc_serialize::Decodable;
+use rustc_serialize::{Encodable, Decodable};
 
-use bencode::Decoder;
+use bencode::{encode, Decoder};
 
 use std::fmt;
 use std::io::prelude::*;
@@ -11,26 +11,26 @@ use std::fs::File;
 
 type Buf = Vec<u8>;
 
-#[derive(RustcEncodable, RustcDecodable, PartialEq)]
+#[derive(RustcEncodable, RustcDecodable, PartialEq, Debug)]
 struct TorrentFile {
     length: usize,
     path: Vec<Buf>
 }
 
-#[derive(RustcEncodable, RustcDecodable, PartialEq)]
+#[derive(RustcEncodable, RustcDecodable, PartialEq, Debug)]
 struct TorrentInfo {
     files: Vec<TorrentFile>,
     name: Buf,
-    piece_length: usize,
+    piecelength: usize,
     pieces: Buf
 }
 
-#[derive(RustcEncodable, RustcDecodable, PartialEq)]
+#[derive(RustcEncodable, RustcDecodable, PartialEq, Debug)]
 struct Torrent {
     announce: Buf,
-    announce_list: Vec<Vec<Buf>>,
-    created_by: Buf,
-    creation_date: usize,
+    announcelist: Vec<Vec<Buf>>,
+    createdby: Buf,
+    creationdate: usize,
     info: TorrentInfo
 }
 
@@ -40,10 +40,21 @@ impl fmt::Display for Torrent {
     }
 }
 
+#[derive(RustcEncodable, RustcDecodable, PartialEq, Debug)]
+struct MyStruct {
+    a: i32,
+    b: String,
+    c: Vec<u8>,
+}
+
 pub fn tracker() {
-    let mut f = File::open("t.torrent").unwrap();
-    let mut b = Vec::new();
-    let _ = f.read_to_end(&mut b);
+    let mut f = File::open("e.torrent").unwrap();
+    let mut s = String::new();
+    let _ = f.read_to_string(&mut s);
+
+    let s = s.trim();
+
+    let mut b: Vec<u8> = s.as_bytes().to_vec();
 
     let torrent: bencode::Bencode = bencode::from_vec(b).unwrap();
     let mut decoded_torrent = Decoder::new(&torrent);
@@ -52,7 +63,7 @@ pub fn tracker() {
     match Decodable::decode(&mut decoded_torrent) {
         Ok(torrent) => {
             result = torrent;
-            println!("{}", result);
+            println!("{:?}", result);
         }
         Err(e) => {
             println!("Decoder error: {:?}", e);
