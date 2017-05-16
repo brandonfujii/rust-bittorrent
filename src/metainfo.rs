@@ -3,24 +3,24 @@ use bencode::{Bencode, FromBencode};
 use bencode::util::ByteString;
 use std::collections::BTreeMap;
 
-use std::fmt;
 use std::io::prelude::*;
 use std::fs::File;
 
-fn decode_field_as_bytes(map: &BTreeMap<ByteString, Bencode>, field: &str) -> Vec<u8> {
+fn decode_field_as_bytes(map: &BTreeMap<ByteString, Bencode>, field: &str) -> Result<Vec<u8>, Error> {
     match map.get(&ByteString::from_str(field)) {
-        Some(contents) => contents.to_bytes().unwrap(),
-        None => panic!("Does not contain expected field")
+        Some(contents) => Ok(contents.to_bytes().unwrap()),
+        None => Err(Error::FieldNotFound)
     }
 }
 
-fn get_field(map: &BTreeMap<ByteString, Bencode>, field: &str) -> Result<String, Error> {
+fn decode_field_as_string(map: &BTreeMap<ByteString, Bencode>, field: &str) -> Result<String, Error> {
     match map.get(&ByteString::from_str(field)) {
         Some(contents) => Ok(contents.to_string()),
-        None => panic!("Field not found!")
+        None => Err(Error::FieldNotFound)
     }
 }
 
+#[derive(Debug)]
 pub enum Error {
     DictMatchErr,
     FieldNotFound
@@ -39,12 +39,12 @@ impl FromBencode for MetaInfo {
     fn from_bencode(bn: &bencode::Bencode) -> Result<MetaInfo, Error> {
         match bn {
             &Bencode::Dict(ref m) => {
-                let b = decode_field_as_bytes(m, "info");
+                let b = decode_field_as_bytes(m, "info")?;
                 let info: Bencode = bencode::from_vec(b).unwrap();
                 let decoded: Result<Info, Error> = FromBencode::from_bencode(&info);
 
-                let announce = get_field(m, "announce")?;
-                let created_by = get_field(m, "created by")?;
+                let announce = decode_field_as_string(m, "announce")?;
+                let created_by = decode_field_as_string(m, "created by")?;
 
                 let metainfo = MetaInfo {
                     announce: announce,
@@ -54,7 +54,7 @@ impl FromBencode for MetaInfo {
 
                 Ok(metainfo)
             }
-            _ => panic!("Dict match error")
+            _ => Err(Error::DictMatchErr)
         }
     }
 }
@@ -74,16 +74,16 @@ impl FromBencode for Info {
     fn from_bencode(bencode: &bencode::Bencode) -> Result<Info, Error> {
         match bencode {
             &Bencode::Dict(ref m) => {
-                let pieces: Vec<u8> = decode_field_as_bytes(m, "pieces");
+                let pieces = decode_field_as_bytes(m, "pieces")?;
                 let num_pieces = pieces.len() as u32;
-                let length = get_field(m, "length")?;
-                let piece_length = get_field(m, "piece length")?;
+                let length = decode_field_as_string(m, "length")?;
+                let piece_length = decode_field_as_string(m, "piece length")?;
 
                 let info = Info {
                     piece_length: piece_length.parse::<u32>().unwrap(),
                     pieces: pieces,
                     num_pieces: num_pieces,
-                    name: get_field(m, "name")?,
+                    name: decode_field_as_string(m, "name")?,
                     length: length.parse::<u64>().unwrap(),
                 };
                 Ok(info)
@@ -93,6 +93,15 @@ impl FromBencode for Info {
     }
 }
 
+pub fn from_file(filename: &String) -> Result<MetaInfo, Error> {
+    let mut f = File::open(filename).unwrap();
+    let mut s = Vec::new();
+    f.read_to_end(&mut s).unwrap();
+
+    let torrent: Bencode = bencode::from_vec(s).unwrap();
+    FromBencode::from_bencode(&torrent)
+}
+
 #[test]
 fn bencode_test() {
     let mut f = File::open("flagfromserver.torrent").unwrap();
@@ -100,10 +109,5 @@ fn bencode_test() {
     f.read_to_end(&mut s).unwrap();
 
     let torrent: Bencode = bencode::from_vec(s).unwrap();
-    let decoded: Result<MetaInfo, Error> = FromBencode::from_bencode(&torrent);
-
-    match decoded {
-        Ok(metainfo) => {println!("{:?}", metainfo)}
-        Err(e) => panic!("Metainfo error!")
-    }
+    let _: Result<MetaInfo, Error> = FromBencode::from_bencode(&torrent);
 }
