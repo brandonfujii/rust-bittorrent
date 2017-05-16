@@ -56,7 +56,7 @@ pub fn tracker() {
 
     let s = s.trim();
 
-    let mut b: Vec<u8> = s.as_bytes().to_vec();
+    let b: Vec<u8> = s.as_bytes().to_vec();
 
     let torrent: bencode::Bencode = bencode::from_vec(b).unwrap();
     let mut decoded_torrent = Decoder::new(&torrent);
