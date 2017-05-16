@@ -2,3 +2,4 @@ target/
 **/*.rs.bk
 Cargo.lock
 *.torrent
+.DS_Store

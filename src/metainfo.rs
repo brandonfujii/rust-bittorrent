@@ -2,9 +2,9 @@ use bencode;
 use bencode::{Bencode, FromBencode};
 use bencode::util::ByteString;
 use std::collections::BTreeMap;
-
 use std::io::prelude::*;
 use std::fs::File;
+use regex::Regex;
 
 fn decode_field_as_bytes(map: &BTreeMap<ByteString, Bencode>, field: &str) -> Result<Vec<u8>, Error> {
     match map.get(&ByteString::from_str(field)) {
@@ -15,9 +15,23 @@ fn decode_field_as_bytes(map: &BTreeMap<ByteString, Bencode>, field: &str) -> Re
 
 fn decode_field_as_string(map: &BTreeMap<ByteString, Bencode>, field: &str) -> Result<String, Error> {
     match map.get(&ByteString::from_str(field)) {
-        Some(contents) => Ok(contents.to_string()),
+        Some(contents) => {
+            Ok(parse_string(&contents.to_string()))
+        }
         None => Err(Error::FieldNotFound)
     }
+}
+
+fn parse_string(s: &str) -> String {
+    let re = Regex::new("\"([0-9a-zA-Z.:/]+)\"").unwrap();
+
+    if re.is_match(s) {
+        let cap = re.captures(s).unwrap();
+        
+        return (&cap[0]).to_string();
+    }
+
+    s.to_string()
 }
 
 #[derive(Debug)]
@@ -102,12 +116,30 @@ pub fn from_file(filename: &String) -> Result<MetaInfo, Error> {
     FromBencode::from_bencode(&torrent)
 }
 
-#[test]
-fn bencode_test() {
-    let mut f = File::open("flagfromserver.torrent").unwrap();
-    let mut s = Vec::new();
-    f.read_to_end(&mut s).unwrap();
+#[cfg(test)]
+mod from_bencode_tests {
+    use bencode;
+    use std::io::prelude::*;
+    use std::fs::File;
+    use super::{MetaInfo, FromBencode, Error};
 
-    let torrent: Bencode = bencode::from_vec(s).unwrap();
-    let _: Result<MetaInfo, Error> = FromBencode::from_bencode(&torrent);
+    #[test]
+    fn flagfromserver_torrent_test() {
+        let mut f = File::open("data/flagfromserver.torrent").unwrap();
+        let mut s = Vec::new();
+        f.read_to_end(&mut s).unwrap();
+
+        let torrent: bencode::Bencode = bencode::from_vec(s).unwrap();
+        let decoded: Result<MetaInfo, Error> = FromBencode::from_bencode(&torrent);
+
+        match decoded {
+            Ok(metainfo) => {
+                assert_eq!(metainfo.announce, "\"http://thomasballinger.com:6969/announce\"");
+                assert_eq!(metainfo.info.name, "\"flag.jpg\"");
+            }
+            _ => panic!("Decoded bencode incorrectly")
+        }
+    }   
 }
+
+

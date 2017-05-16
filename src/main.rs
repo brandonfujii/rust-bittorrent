@@ -1,4 +1,6 @@
 extern crate bencode;
+extern crate regex;
+
 use std::env;
 
 mod metainfo;
