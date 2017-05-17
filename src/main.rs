@@ -1,6 +1,7 @@
 extern crate bencode;
 extern crate hyper;
 extern crate regex;
+extern crate urlencoding;
 
 use std::env;
 

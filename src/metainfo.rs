@@ -43,7 +43,7 @@ fn parse_string(s: &str) -> String {
 
     if re.is_match(s) {
         let cap = re.captures(s).unwrap();
-        return (&cap[0]).to_string();
+        return (&cap[1]).to_string();
     }
 
     s.to_string()
@@ -78,7 +78,11 @@ impl FromBencode for MetaInfo {
                 let info_hash = hash::sha(&b);
 
                 let announce = decode_field_as_string(m, "announce")?;
-                let created_by = decode_field_as_string(m, "created by")?;
+                let created_by;
+                match decode_field_as_string(m, "created by") {
+                    Ok(s) => created_by = s,
+                    Err(_) => created_by = String::from("")
+                }
 
                 let metainfo = MetaInfo {
                     announce: announce,
@@ -170,8 +174,8 @@ mod from_bencode_tests {
 
         match decoded {
             Ok(metainfo) => {
-                assert_eq!(metainfo.announce, "\"http://thomasballinger.com:6969/announce\"");
-                assert_eq!(metainfo.info.name, "\"flag.jpg\"");
+                assert_eq!(metainfo.announce, "http://thomasballinger.com:6969/announce");
+                assert_eq!(metainfo.info.name, "flag.jpg");
             }
             _ => panic!("Decoded bencode incorrectly")
         }
