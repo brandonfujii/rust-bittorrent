@@ -1,9 +1,11 @@
 extern crate bencode;
+extern crate hyper;
 extern crate regex;
 
 use std::env;
 
 mod metainfo;
+mod tracker;
 
 pub fn main() {
     let args: Vec<String> = env::args().collect();

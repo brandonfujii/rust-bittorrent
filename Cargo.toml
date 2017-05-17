@@ -7,3 +7,4 @@ authors = ["Josh Shi <thehandsomepanther@gmail.com>", "Brandon Fujii <brandonkfu
 bencode = "0.1.16"
 rustc-serialize = "0.3.24"
 regex = "0.2"
+hyper = "0.10"
