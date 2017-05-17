@@ -5,9 +5,11 @@ use std::collections::BTreeMap;
 use std::io::prelude::*;
 use std::fs::File;
 use regex::Regex;
-
 use hash;
 
+/// Finds a value in the BTreeMap corresponding to a given key and returns a Result containing
+///     1) a Vec<u8> of the data, if it exists
+///     2) a FieldNotFound error otherwise
 fn decode_field_as_bytes(map: &BTreeMap<ByteString, Bencode>, field: &str) -> Result<Vec<u8>, Error> {
     match map.get(&ByteString::from_str(field)) {
         Some(contents) => Ok(contents.to_bytes().unwrap()),
@@ -15,6 +17,9 @@ fn decode_field_as_bytes(map: &BTreeMap<ByteString, Bencode>, field: &str) -> Re
     }
 }
 
+/// Finds a value in the BTreeMap corresponding to a given key and returns a Result containing
+///     1) a String of the data, if it exists
+///     2) a FieldNotFound error otherwise
 fn decode_field_as_string(map: &BTreeMap<ByteString, Bencode>, field: &str) -> Result<String, Error> {
     match map.get(&ByteString::from_str(field)) {
         Some(contents) => {
@@ -24,12 +29,20 @@ fn decode_field_as_string(map: &BTreeMap<ByteString, Bencode>, field: &str) -> R
     }
 }
 
+/// Takes a string which is denoted within quotation marks and returns that string, or the original
+/// string if no match is found
+///
+/// # Example
+///
+/// ```
+/// let s = parse_string("s\"pieces\"")?;
+/// assert_eq!(s, "pieces");
+/// ```
 fn parse_string(s: &str) -> String {
     let re = Regex::new("\"([0-9a-zA-Z.:/]+)\"").unwrap();
 
     if re.is_match(s) {
         let cap = re.captures(s).unwrap();
-        
         return (&cap[0]).to_string();
     }
 
@@ -42,7 +55,7 @@ pub enum Error {
     FieldNotFound
 }
 
-#[derive(PartialEq, Debug)]
+#[derive(Debug)]
 pub struct MetaInfo {
     pub announce: String,
     pub created_by: String,
@@ -53,6 +66,9 @@ pub struct MetaInfo {
 impl FromBencode for MetaInfo {
     type Err = Error;
 
+    /// Attempts to construct a MetaInfo object from a Bencode object. Returns a Result containing either
+    ///     1) a MetaInfo object, if a proper Bencode object was passed in
+    ///     2) DictMatchErr otherwise
     fn from_bencode(bn: &bencode::Bencode) -> Result<MetaInfo, Error> {
         match bn {
             &Bencode::Dict(ref m) => {
@@ -78,7 +94,7 @@ impl FromBencode for MetaInfo {
     }
 }
 
-#[derive(PartialEq, Debug)]
+#[derive(Debug)]
 pub struct Info {
     pub piece_length: u32,
     pub pieces: Vec<u8>,
@@ -90,6 +106,10 @@ pub struct Info {
 impl FromBencode for Info {
     type Err = Error;
 
+    /// Attempts to construct an Info object from a Bencode object. Returns a Result containing
+    /// either:
+    ///     1) an Info object, if a proper Bencode object was passed in
+    ///     2) DictMatchErr otherwise
     fn from_bencode(bencode: &bencode::Bencode) -> Result<Info, Error> {
         match bencode {
             &Bencode::Dict(ref m) => {
@@ -112,6 +132,17 @@ impl FromBencode for Info {
     }
 }
 
+/// Attempts to construct a MetaInfo object from a torrent file located at the specified path.
+/// Returns a Result containing either:
+///     1) a MetaInfo object, if one can successfully be created
+///     2) an Error otherwise
+///
+/// # Example
+///
+/// ```
+/// # use metainfo;
+/// let m = metainfo::from_file("data/flagfromserver.torrent");
+/// ```
 pub fn from_file(filename: &String) -> Result<MetaInfo, Error> {
     let mut f = File::open(filename).unwrap();
     let mut s = Vec::new();
@@ -144,7 +175,5 @@ mod from_bencode_tests {
             }
             _ => panic!("Decoded bencode incorrectly")
         }
-    }   
+    }
 }
-
-
