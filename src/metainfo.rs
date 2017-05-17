@@ -6,6 +6,8 @@ use std::io::prelude::*;
 use std::fs::File;
 use regex::Regex;
 
+use hash;
+
 fn decode_field_as_bytes(map: &BTreeMap<ByteString, Bencode>, field: &str) -> Result<Vec<u8>, Error> {
     match map.get(&ByteString::from_str(field)) {
         Some(contents) => Ok(contents.to_bytes().unwrap()),
@@ -45,6 +47,7 @@ pub struct MetaInfo {
     pub announce: String,
     pub created_by: String,
     pub info: Info,
+    pub info_hash: String,
 }
 
 impl FromBencode for MetaInfo {
@@ -54,8 +57,9 @@ impl FromBencode for MetaInfo {
         match bn {
             &Bencode::Dict(ref m) => {
                 let b = decode_field_as_bytes(m, "info")?;
-                let info: Bencode = bencode::from_vec(b).unwrap();
+                let info: Bencode = bencode::from_vec(b.to_owned()).unwrap();
                 let decoded: Result<Info, Error> = FromBencode::from_bencode(&info);
+                let info_hash = hash::sha(&b);
 
                 let announce = decode_field_as_string(m, "announce")?;
                 let created_by = decode_field_as_string(m, "created by")?;
@@ -63,7 +67,8 @@ impl FromBencode for MetaInfo {
                 let metainfo = MetaInfo {
                     announce: announce,
                     created_by: created_by,
-                    info: decoded?
+                    info: decoded?,
+                    info_hash: info_hash,
                 };
 
                 Ok(metainfo)

@@ -6,6 +6,7 @@ use std::env;
 
 mod metainfo;
 mod tracker;
+mod hash;
 
 pub fn main() {
     let args: Vec<String> = env::args().collect();
