@@ -60,7 +60,7 @@ pub struct MetaInfo {
     pub announce: String,
     pub created_by: String,
     pub info: Info,
-    pub info_hash: String,
+    pub info_hash: Vec<u8>,
 }
 
 impl FromBencode for MetaInfo {

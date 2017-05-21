@@ -1,6 +1,6 @@
 use hyper::{Client, client, header};
 use metainfo::MetaInfo;
-use urlencoding::encode;
+use url::percent_encoding::{percent_encode, DEFAULT_ENCODE_SET};
 
 #[allow(dead_code)]
 pub enum TrackerError {
@@ -41,9 +41,10 @@ pub fn retrieve_peers(metainfo: &MetaInfo, peer_id: &str, port: &str) -> Result<
     let downloaded = 0.to_string();
     let left = metainfo.info.length.to_string();
     let compact = 1.to_string();
+    let percent_encoded_hash: String = percent_encode(&metainfo.info_hash, DEFAULT_ENCODE_SET).collect();
 
     let params: Vec<(&str, &str)> = vec![
-        ("info_hash", metainfo.info_hash.as_str()),
+        ("info_hash", percent_encoded_hash.as_ref()),
         ("peer_id", peer_id),
         ("port", port),
         ("uploaded", uploaded.as_ref()),
@@ -70,7 +71,7 @@ pub fn retrieve_peers(metainfo: &MetaInfo, peer_id: &str, port: &str) -> Result<
 #[test]
 fn retrieve_peers_test() {
     use metainfo;
-    let m = metainfo::from_file(&String::from("data/bsd.torrent")).unwrap();
+    let m = metainfo::from_file(&String::from("data/flagfromserver.torrent")).unwrap();
     let res = retrieve_peers(&m, "tovatovatovatovatova", "8080");
     // println!("{:?}", res);
 }
