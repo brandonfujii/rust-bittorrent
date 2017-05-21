@@ -1,6 +1,11 @@
+use bencode;
+use bencode::{Bencode, FromBencode};
+use bencode::util::ByteString;
 use hyper::{Client, client, header};
 use metainfo::MetaInfo;
 use url::percent_encoding::{percent_encode, DEFAULT_ENCODE_SET};
+use std::io::Read;
+use tracker_response::{TrackerResponse, Error};
 
 #[allow(dead_code)]
 pub enum TrackerError {
@@ -55,13 +60,17 @@ pub fn retrieve_peers(metainfo: &MetaInfo, peer_id: &str, port: &str) -> Result<
     ];
     let query_params = parameterize(params);
     let query_url = format!("{}?{}", metainfo.announce, query_params);
-    println!("{}", query_url);
     let client = Client::new();
 
     match client.get(&query_url).header(header::Connection::close()).send() {
-        Ok(response) => {
-            // TODO: parse response body
-            // return peers in response
+        Ok(mut response) => {
+            let mut s = Vec::new();
+            response.read_to_end(&mut s).unwrap();
+
+            let trackers: Bencode = bencode::from_vec(s).unwrap();
+            let decoded: Result<TrackerResponse, Error> = FromBencode::from_bencode(&trackers);
+            println!("{:?}", decoded.unwrap());
+
             Ok(response)
         }
         Err(_) => Err(TrackerError::RetrievePeerError)
@@ -73,5 +82,4 @@ fn retrieve_peers_test() {
     use metainfo;
     let m = metainfo::from_file(&String::from("data/flagfromserver.torrent")).unwrap();
     let res = retrieve_peers(&m, "tovatovatovatovatova", "8080");
-    // println!("{:?}", res);
 }
