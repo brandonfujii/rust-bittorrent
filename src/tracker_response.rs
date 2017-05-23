@@ -30,11 +30,8 @@ impl FromBencode for TrackerResponse {
                 let incomplete = decode_field_as_string(m, "incomplete")?;
                 let mut peers_bytes = decode_field_as_bytes(m, "peers")?;
 
-                for i in 0..peers_bytes.len() {
-                    if peers_bytes[i] == 58 {
-                        peers_bytes = peers_bytes[i+1..peers_bytes.len()].iter().cloned().collect();
-                        break;
-                    }
+                if let Some(i) = peers_bytes.iter().position(|&b| b == 58) {
+                    peers_bytes = peers_bytes.split_off(i).split_off(1);
                 }
 
                 let mut peers = vec![];
