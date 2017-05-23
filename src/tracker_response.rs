@@ -1,6 +1,7 @@
 use bencode;
 use bencode::{Bencode, FromBencode};
 use util::*;
+use peer::Peer;
 
 #[derive(Debug)]
 pub struct TrackerResponse {
@@ -11,7 +12,7 @@ pub struct TrackerResponse {
     // pub tracker_id: String,
     pub complete: u32,
     pub incomplete: u32,
-    pub peers: Vec<u8>,
+    pub peers: Vec<Peer>,
 }
 
 impl FromBencode for TrackerResponse {
@@ -27,7 +28,23 @@ impl FromBencode for TrackerResponse {
                 let interval = decode_field_as_string(m, "interval")?;
                 let complete = decode_field_as_string(m, "complete")?;
                 let incomplete = decode_field_as_string(m, "incomplete")?;
-                let peers = decode_field_as_bytes(m, "peers")?;
+                let mut peers_bytes = decode_field_as_bytes(m, "peers")?;
+
+                for i in 0..peers_bytes.len() {
+                    if peers_bytes[i] == 58 {
+                        peers_bytes = peers_bytes[i+1..peers_bytes.len()].iter().cloned().collect();
+                        break;
+                    }
+                }
+
+                let mut peers = vec![];
+                for i in 0..(peers_bytes.len() / 6) {
+                    let offset = i * 6;
+                    let peer = Peer::from_bytes(&peers_bytes[offset..offset+6]);
+                    peers.push(peer);
+                }
+
+                println!("{:?}", peers);
 
                 let tracker_response = TrackerResponse {
                     interval: interval.parse::<u32>().unwrap(),

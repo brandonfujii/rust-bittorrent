@@ -11,6 +11,7 @@ mod tracker;
 mod tracker_response;
 mod hash;
 mod util;
+mod peer;
 
 pub fn main() {
     let args: Vec<String> = env::args().collect();

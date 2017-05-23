@@ -1,11 +1,12 @@
 use bencode;
 use bencode::{Bencode, FromBencode};
-use hyper::{Client, client, header};
+use hyper::{Client, header};
 use metainfo::MetaInfo;
 use url::percent_encoding::{percent_encode, DEFAULT_ENCODE_SET};
 use std::io::Read;
 use tracker_response::TrackerResponse;
 use util::Error;
+use peer::Peer;
 
 #[allow(dead_code)]
 pub enum TrackerError {
@@ -41,7 +42,7 @@ mod parameterize_tests {
 
 /// Sends a request to the tracker specified by the MetaInfo's announce attribute and returns a
 /// list of `peer`s and `peer_id`s.
-pub fn retrieve_peers(metainfo: &MetaInfo, peer_id: &str, port: &str) -> Result<client::response::Response, TrackerError> {
+pub fn retrieve_peers(metainfo: &MetaInfo, peer_id: &str, port: &str) -> Result<Vec<Peer>, TrackerError> {
     let uploaded = 0.to_string();
     let downloaded = 0.to_string();
     let left = metainfo.info.length.to_string();
@@ -69,9 +70,9 @@ pub fn retrieve_peers(metainfo: &MetaInfo, peer_id: &str, port: &str) -> Result<
 
             let trackers: Bencode = bencode::from_vec(s).unwrap();
             let decoded: Result<TrackerResponse, Error> = FromBencode::from_bencode(&trackers);
-            println!("{:?}", decoded.unwrap());
+            let peers = decoded.unwrap().peers;
 
-            Ok(response)
+            Ok(peers)
         }
         Err(_) => Err(TrackerError::RetrievePeerError)
     }
