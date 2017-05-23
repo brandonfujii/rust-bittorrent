@@ -2,10 +2,7 @@ use bencode;
 use bencode::{Bencode, FromBencode};
 use bencode::util::ByteString;
 use std::collections::BTreeMap;
-use std::io::prelude::*;
-use std::fs::File;
 use regex::Regex;
-use hash;
 
 /// Finds a value in the BTreeMap corresponding to a given key and returns a Result containing
 ///     1) a Vec<u8> of the data, if it exists

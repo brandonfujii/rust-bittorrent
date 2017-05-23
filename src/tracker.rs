@@ -1,6 +1,5 @@
 use bencode;
 use bencode::{Bencode, FromBencode};
-use bencode::util::ByteString;
 use hyper::{Client, client, header};
 use metainfo::MetaInfo;
 use url::percent_encoding::{percent_encode, DEFAULT_ENCODE_SET};
