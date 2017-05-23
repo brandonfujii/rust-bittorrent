@@ -4,7 +4,8 @@ use hyper::{Client, client, header};
 use metainfo::MetaInfo;
 use url::percent_encoding::{percent_encode, DEFAULT_ENCODE_SET};
 use std::io::Read;
-use tracker_response::{TrackerResponse, Error};
+use tracker_response::TrackerResponse;
+use util::Error;
 
 #[allow(dead_code)]
 pub enum TrackerError {

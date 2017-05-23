@@ -10,6 +10,7 @@ mod metainfo;
 mod tracker;
 mod tracker_response;
 mod hash;
+mod util;
 
 pub fn main() {
     let args: Vec<String> = env::args().collect();
