@@ -18,5 +18,5 @@ pub fn main() {
     let filename = &args[1];
     let m = metainfo::from_file(filename).unwrap();
 
-    let _ = tracker::retrieve_peers(&m, "tovatovatovatovatova", "8080");
+    let peers = tracker::retrieve_peers(&m, "tovatovatovatovatova", "8080").unwrap();
 }

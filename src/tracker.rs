@@ -8,7 +8,7 @@ use tracker_response::TrackerResponse;
 use util::Error;
 use peer::Peer;
 
-#[allow(dead_code)]
+#[derive(Debug)]
 pub enum TrackerError {
     RetrievePeerError
 }

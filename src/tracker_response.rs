@@ -44,8 +44,6 @@ impl FromBencode for TrackerResponse {
                     peers.push(peer);
                 }
 
-                println!("{:?}", peers);
-
                 let tracker_response = TrackerResponse {
                     interval: interval.parse::<u32>().unwrap(),
                     complete: complete.parse::<u32>().unwrap(),
