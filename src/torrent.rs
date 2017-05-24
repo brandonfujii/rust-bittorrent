@@ -25,9 +25,7 @@ impl Torrent {
         }
 
         let file = File::open(path).unwrap();
-
         let mut pieces: Vec<Piece> = vec![];
-
         let n = ((num_pieces as f64)/20.).ceil() as usize;
 
         for i in 0..n {

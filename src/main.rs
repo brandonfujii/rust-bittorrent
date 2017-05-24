@@ -15,6 +15,7 @@ mod peer;
 mod block;
 mod piece;
 mod torrent;
+mod connection;
 
 pub fn main() {
     let args: Vec<String> = env::args().collect();
@@ -23,4 +24,5 @@ pub fn main() {
 
     let peers = tracker::retrieve_peers(&m, "tovatovatovatovatova", "8080").unwrap();
     let torrent = torrent::Torrent::new(m);
+    println!("{:?}", torrent);
 }
