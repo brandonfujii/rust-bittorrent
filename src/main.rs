@@ -12,6 +12,9 @@ mod tracker_response;
 mod hash;
 mod util;
 mod peer;
+mod block;
+mod piece;
+mod torrent;
 
 pub fn main() {
     let args: Vec<String> = env::args().collect();
@@ -19,5 +22,6 @@ pub fn main() {
     let m = metainfo::from_file(filename).unwrap();
 
     let peers = tracker::retrieve_peers(&m, "tovatovatovatovatova", "8080").unwrap();
-    println!("{:?}", peers);
+    // println!("{:?}", peers);
+    let torrent = torrent::Torrent::new(m);
 }

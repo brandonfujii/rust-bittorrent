@@ -5,7 +5,7 @@ use std::fs::File;
 use hash;
 use util::*;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct MetaInfo {
     pub announce: String,
     pub created_by: String,
@@ -48,7 +48,7 @@ impl FromBencode for MetaInfo {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Info {
     pub piece_length: u32,
     pub pieces: Vec<u8>,
