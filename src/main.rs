@@ -24,5 +24,6 @@ pub fn main() {
 
     let peers = tracker::retrieve_peers(&m, "tovatovatovatovatova", "8080").unwrap();
     let torrent = torrent::Torrent::new(m);
+    println!("{:?}", peers);
     println!("{:?}", torrent);
 }
