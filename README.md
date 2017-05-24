@@ -18,8 +18,9 @@ cargo run <path/to/bittorrent-file>
 
 ### What's left to do:
 
-	- Initiate handshaking protocol with client and peers
-	- Coordinating a download of a file among peers
+	- Initiate handshaking protocol with client and peers (In progress)
+	- Coordinate a download of a file among peers
+	- Implement block storage by designating each requested block of data to the correct index in our Torrent struct and saving it
 	- Writing the target file to a disk
 
 
