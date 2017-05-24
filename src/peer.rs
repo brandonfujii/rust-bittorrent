@@ -6,6 +6,7 @@ pub struct Peer {
     pub port: u16
 }
 
+/// Represents a peer from which a client can request data
 impl Peer {
     pub fn from_bytes(v: &[u8]) -> Self {
         let ip = Ipv4Addr::new(v[0], v[1], v[2], v[3]);

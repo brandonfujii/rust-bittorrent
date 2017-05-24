@@ -11,9 +11,10 @@ pub struct Torrent {
     pieces: Vec<Piece>,
 }
 
+/// Represents the entire torrent, including metainfo derived from the `.torrent` file as well as
+/// the client's id, the file to be downloaded and the pieces of the file
 impl Torrent {
     pub fn new(metainfo: MetaInfo) -> Self {
-
         let filename = metainfo.clone().info.name;
         let file_length = metainfo.info.length;
         let piece_length = metainfo.info.piece_length;

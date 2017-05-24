@@ -22,7 +22,5 @@ pub fn main() {
     let m = metainfo::from_file(filename).unwrap();
 
     let peers = tracker::retrieve_peers(&m, "tovatovatovatovatova", "8080").unwrap();
-    // println!("{:?}", peers);
     let torrent = torrent::Torrent::new(m);
-    println!("{:?}", torrent);
 }

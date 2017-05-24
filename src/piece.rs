@@ -10,6 +10,8 @@ pub struct Piece {
     hash: Vec<u8>,
 }
 
+/// Represents a portion of the data to be downloaded which is described in the metainfo file and
+/// can be verified by a SHA1 hash. A piece is made up of blocks
 impl Piece {
     pub fn new(length: u32, offset: u32, hash: Vec<u8>) -> Self {
 
