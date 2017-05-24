@@ -51,7 +51,7 @@ impl FromBencode for MetaInfo {
 #[derive(Debug, Clone)]
 pub struct Info {
     pub piece_length: u32,
-    pub pieces: Vec<u8>,
+    pub pieces: Vec<Vec<u8>>,
     pub num_pieces: u32,
     pub name: String,
     pub length: u64,
@@ -67,8 +67,9 @@ impl FromBencode for Info {
     fn from_bencode(bencode: &bencode::Bencode) -> Result<Info, Error> {
         match bencode {
             &Bencode::Dict(ref m) => {
-                let pieces = decode_field_as_bytes(m, "pieces")?;
-                let num_pieces = pieces.len() as u32;
+                let pieces_bytes = decode_field_as_bytes(m, "pieces")?;
+                let pieces = pieces_bytes.chunks(20).map(|v| v.to_owned()).collect();
+                let num_pieces = pieces_bytes.len() as u32;
                 let length = decode_field_as_string(m, "length")?;
                 let piece_length = decode_field_as_string(m, "piece length")?;
 

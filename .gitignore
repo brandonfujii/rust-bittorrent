@@ -3,3 +3,5 @@ target/
 Cargo.lock
 *.torrent
 .DS_Store
+*.jpg
+*.mp3
