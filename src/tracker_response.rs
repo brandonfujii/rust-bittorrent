@@ -5,11 +5,7 @@ use peer::Peer;
 
 #[derive(Debug)]
 pub struct TrackerResponse {
-    // pub failure_reason: String,
-    // pub warning_message: String,
     pub interval: u32,
-    // pub min_interval: u32,
-    // pub tracker_id: String,
     pub complete: u32,
     pub incomplete: u32,
     pub peers: Vec<Peer>,
@@ -51,6 +47,37 @@ impl FromBencode for TrackerResponse {
                 Ok(tracker_response)
             }
             _ => Err(Error::DictMatchErr)
+        }
+    }
+}
+
+
+#[cfg(test)]
+mod tracker_response_tests {
+    use super::{TrackerResponse, FromBencode};
+    use peer::Peer;
+    use bencode;
+    use util::*;
+
+    #[test]
+    fn flagfromserver_torrent_test() {
+        let s = vec![100, 56, 58, 99, 111, 109, 112, 108, 101, 116, 101, 105, 49, 101, 49, 48, 58, 100, 111, 119, 110, 108, 111, 97, 100, 101, 100, 105, 51, 101, 49, 48, 58, 105, 110, 99, 111, 109, 112, 108, 101, 116, 101, 105, 50, 101, 56, 58, 105, 110, 116, 101, 114, 118, 97, 108, 105, 49, 56, 51, 56, 101, 49, 50, 58, 109, 105, 110, 32, 105, 110, 116, 101, 114, 118, 97, 108, 105, 57, 49, 57, 101, 53, 58, 112, 101, 101, 114, 115, 49, 56, 58, 98, 227, 182, 253, 31, 144, 165, 124, 144, 88, 31, 144, 96, 126, 104, 219, 238, 9, 101];
+
+        let torrent: bencode::Bencode = bencode::from_vec(s).unwrap();
+        let decoded: Result<TrackerResponse, Error> = FromBencode::from_bencode(&torrent);
+
+        match decoded {
+            Ok(response) => {
+                assert_eq!(response.interval, 1838);
+                assert_eq!(response.complete, 1);
+                assert_eq!(response.incomplete, 2);
+                assert_eq!(response.peers, vec![
+                    Peer::from_bytes(&[98, 227, 182, 253, 31, 144]),
+                    Peer::from_bytes(&[165, 124, 144, 88, 31, 144]),
+                    Peer::from_bytes(&[96, 126, 104, 219, 238, 9]),
+                ]);
+            }
+            _ => panic!("Decoded bencode incorrectly")
         }
     }
 }

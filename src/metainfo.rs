@@ -5,7 +5,7 @@ use std::fs::File;
 use hash;
 use util::*;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct MetaInfo {
     pub announce: String,
     pub created_by: String,
@@ -48,7 +48,7 @@ impl FromBencode for MetaInfo {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Info {
     pub piece_length: u32,
     pub pieces: Vec<Vec<u8>>,
@@ -108,11 +108,12 @@ pub fn from_file(filename: &String) -> Result<MetaInfo, Error> {
 }
 
 #[cfg(test)]
-mod from_bencode_tests {
+mod metainfo_tests {
     use bencode;
     use std::io::prelude::*;
     use std::fs::File;
-    use super::{MetaInfo, FromBencode, Error};
+    use super::{MetaInfo, FromBencode};
+    use util::*;
 
     #[test]
     fn flagfromserver_torrent_test() {

@@ -16,7 +16,6 @@ pub struct Torrent {
 impl Torrent {
     pub fn new(metainfo: MetaInfo) -> Self {
         let filename = metainfo.clone().info.name;
-        let file_length = metainfo.info.length;
         let piece_length = metainfo.info.piece_length;
         let num_pieces = metainfo.info.num_pieces;
         let path = Path::new(&filename);
@@ -47,9 +46,70 @@ impl Torrent {
 
         Torrent {
             metainfo: metainfo,
-            peer_id: "tovatovatovatovatova".to_string(),
+            peer_id: String::from("tovatovatovatovatova"),
             file: file,
             pieces: pieces,
         }
+    }
+}
+
+impl PartialEq for Torrent {
+    fn eq(&self, other: &Torrent) -> bool {
+        self.metainfo == other.metainfo &&
+        self.peer_id == other.peer_id &&
+        self.pieces == other.pieces
+    }
+
+    fn ne(&self, other: &Torrent) -> bool {
+        !(self == other)
+    }
+}
+
+#[cfg(test)]
+mod torrent_tests {
+    use super::Torrent;
+    use piece::Piece;
+    use block::Block;
+    use metainfo::{MetaInfo, Info};
+    use std::fs::File;
+    use std::path::Path;
+    use std::fs;
+
+    #[test]
+    fn make_torrent_test() {
+        let filename = String::from("info.txt");
+        let i = Info {
+            piece_length: 12,
+            pieces: vec![vec![1, 2, 3]],
+            num_pieces: 3,
+            name: filename.clone(),
+            length: 12
+        };
+
+        let m = MetaInfo {
+            announce: String::from("https://google.com/announce"),
+            created_by: String::from("tov"),
+            info: i,
+            info_hash: vec![2, 3, 4]
+        };
+
+        let path = Path::new(&filename);
+        let _ = File::create(path);
+        let f = File::open(path).unwrap();
+
+        let t = Torrent::new(m.clone());
+        assert_eq!(t, Torrent {
+            metainfo: m,
+            peer_id: String::from("tovatovatovatovatova"),
+            file: f,
+            pieces: vec![Piece {
+                length: 3,
+                offset: 0,
+                blocks: vec![Block::new(0, 3)],
+                hash: vec![1, 2, 3]
+            }]
+        });
+
+        let _ = fs::remove_file(path);
     }
 }

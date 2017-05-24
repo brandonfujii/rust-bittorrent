@@ -2,12 +2,12 @@ use block::Block;
 
 static BLOCK_SIZE: u32 = 16384; // 2^14
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct Piece {
-    length: u32,
-    offset: u32,
-    blocks: Vec<Block>,
-    hash: Vec<u8>,
+    pub length: u32,
+    pub offset: u32,
+    pub blocks: Vec<Block>,
+    pub hash: Vec<u8>,
 }
 
 /// Represents a portion of the data to be downloaded which is described in the metainfo file and
@@ -37,5 +37,22 @@ impl Piece {
             hash: hash,
             blocks: blocks,
         }
+    }
+}
+
+#[cfg(test)]
+mod piece_tests {
+    use super::Piece;
+    use block::Block;
+
+    #[test]
+    fn make_piece_test() {
+        let p = Piece::new(256, 4, vec![1, 2, 3]);
+        assert_eq!(p, Piece {
+            length: 256,
+            offset: 4,
+            blocks: vec![Block::new(0, 256)],
+            hash: vec![1, 2, 3]
+        });
     }
 }
