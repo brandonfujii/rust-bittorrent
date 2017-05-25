@@ -76,9 +76,9 @@ impl Connection {
     }
 
     fn receive_message(&mut self) -> Result<Message, Error> {
-        let message_size = bytes_to_u32(&try!(self.read_n(4)));
-        if message_size > 0 {
-            let message = try!(self.read_n(message_size));
+        let length = bytes_to_u32(&try!(self.read_n(4)));
+        if length > 0 {
+            let message = try!(self.read_n(length));
             Ok(Message::new(&message[0], &message[1..]))
         } else {
             Ok(Message::KeepAlive)
@@ -106,12 +106,12 @@ impl Connection {
         match message {
             Message::KeepAlive => {},
             Message::Bitfield(bytes) => {
-                for have_index in 0..self.have.len() {
-                    let bytes_index = have_index / 8;
-                    let index_into_byte = have_index % 8;
+                for i in 0..self.have.len() {
+                    let bytes_index = i / 8;
+                    let index_into_byte = i % 8;
                     let byte = bytes[bytes_index];
                     let value = (byte & (1 << (7 - index_into_byte))) != 0;
-                    self.have[have_index] = value;
+                    self.have[i] = value;
                 };
                 try!(self.send_interested());
             },

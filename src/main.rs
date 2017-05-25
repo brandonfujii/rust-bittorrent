@@ -3,6 +3,7 @@ extern crate hyper;
 extern crate regex;
 extern crate urlencoding;
 extern crate url;
+extern crate byteorder;
 
 use std::env;
 
