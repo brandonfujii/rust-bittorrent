@@ -68,8 +68,8 @@ impl FromBencode for Info {
         match bencode {
             &Bencode::Dict(ref m) => {
                 let pieces_bytes = decode_field_as_bytes(m, "pieces")?;
-                let pieces = pieces_bytes.chunks(20).map(|v| v.to_owned()).collect();
-                let num_pieces = pieces_bytes.len() as u32;
+                let pieces: Vec<Vec<u8>> = pieces_bytes.chunks(20).map(|v| v.to_owned()).collect();
+                let num_pieces = pieces.len() as u32;
                 let length = decode_field_as_string(m, "length")?;
                 let piece_length = decode_field_as_string(m, "piece length")?;
 

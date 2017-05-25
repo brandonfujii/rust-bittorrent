@@ -123,8 +123,8 @@ impl Connection {
             Message::Unchoke => {
                 if self.am_i_choked {
                     self.am_i_choked = false;
-                    try!(self.request_next_block());
                 }
+                try!(self.request_next_block());
             }
             Message::Piece(piece_index, offset, data) => {
                 let block_index = offset / BLOCK_SIZE;
