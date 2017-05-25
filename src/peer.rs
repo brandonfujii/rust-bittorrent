@@ -1,6 +1,6 @@
 use std::net::Ipv4Addr;
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct Peer {
     pub ip: Ipv4Addr,
     pub port: u16

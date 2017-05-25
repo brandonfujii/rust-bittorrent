@@ -16,6 +16,7 @@ mod block;
 mod piece;
 mod torrent;
 mod connection;
+mod message;
 
 pub fn main() {
     let args: Vec<String> = env::args().collect();
@@ -24,6 +25,5 @@ pub fn main() {
 
     let peers = tracker::retrieve_peers(&m, "tovatovatovatovatova", "8080").unwrap();
     let torrent = torrent::Torrent::new(m);
-    println!("{:?}", peers);
-    println!("{:?}", torrent);
+    let _ = connection::Connection::connect(peers[0].clone(), torrent);
 }

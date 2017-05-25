@@ -2,6 +2,7 @@ use metainfo::MetaInfo;
 use piece::Piece;
 use std::fs::File;
 use std::path::Path;
+use std::io::Error;
 
 #[derive(Debug)]
 pub struct Torrent {
@@ -29,16 +30,15 @@ impl Torrent {
         let n = ((num_pieces as f64)/20.).ceil() as usize;
 
         for i in 0..n {
-            let offset = i as u32 * piece_length;
-            let length;
+            let length = {
+                if i == n - 1 {
+                    num_pieces % piece_length
+                } else {
+                    piece_length
+                }
+            };
 
-            if i == n - 1 {
-                length = num_pieces % piece_length;
-            } else {
-                length = piece_length;
-            }
-
-            let piece = Piece::new(length, offset, metainfo.info.pieces[i as usize].clone());
+            let piece = Piece::new(length, i as u32, piece_length, metainfo.info.pieces[i as usize].clone());
             pieces.push(piece);
         }
 
@@ -48,6 +48,37 @@ impl Torrent {
             file: file,
             pieces: pieces,
         }
+    }
+
+    pub fn store(&mut self, piece_index: u32, block_index: u32, data: Vec<u8>) -> Result<bool, Error> {
+        {
+            let piece = &mut self.pieces[piece_index as usize];
+            try!(piece.store(&mut self.file, block_index, data));
+        }
+        Ok(self.is_complete())
+    }
+
+    pub fn next_block_to_request(&self, peer_has_pieces: &[bool]) -> Option<(u32, u32, u32)> {
+        for piece in self.pieces.iter() {
+            if peer_has_pieces[piece.index as usize] {
+                match piece.next_block_to_request() {
+                    Some(block) => {
+                        return Some((piece.index, block.index, block.length))
+                    },
+                    None => {}
+                }
+            }
+        }
+        None
+    }
+
+    fn is_complete(&self) -> bool {
+        for piece in self.pieces.iter() {
+            if !piece.is_complete {
+                return false
+            }
+        }
+        true
     }
 }
 
@@ -102,9 +133,11 @@ mod torrent_tests {
             file: f,
             pieces: vec![Piece {
                 length: 3,
-                offset: 0,
+                index: 0,
+                piece_length: 12,
                 blocks: vec![Block::new(0, 3)],
-                hash: vec![1, 2, 3]
+                hash: vec![1, 2, 3],
+                is_complete: false,
             }]
         });
 

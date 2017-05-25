@@ -69,7 +69,6 @@ pub fn retrieve_peers(metainfo: &MetaInfo, peer_id: &str, port: &str) -> Result<
             response.read_to_end(&mut s).unwrap();
 
             let trackers: Bencode = bencode::from_vec(s).unwrap();
-            println!("{:?}", trackers);
             let decoded: Result<TrackerResponse, Error> = FromBencode::from_bencode(&trackers);
             let peers = decoded.unwrap().peers;
 
