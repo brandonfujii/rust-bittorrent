@@ -19,7 +19,7 @@ pub enum Error {
 /// assert_eq!(s, "pieces");
 /// ```
 pub fn parse_string(s: &str) -> String {
-    let re = Regex::new("\"([0-9a-zA-Z.:/]+)\"").unwrap();
+    let re = Regex::new("\"(.*)\"").unwrap();
 
     if re.is_match(s) {
         let cap = re.captures(s).unwrap();

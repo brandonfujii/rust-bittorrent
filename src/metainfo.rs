@@ -72,12 +72,13 @@ impl FromBencode for Info {
                 let num_pieces = pieces.len() as u32;
                 let length = decode_field_as_string(m, "length")?;
                 let piece_length = decode_field_as_string(m, "piece length")?;
+                let name = decode_field_as_string(m, "name")?;
 
                 let info = Info {
                     piece_length: piece_length.parse::<u32>().unwrap(),
                     pieces: pieces,
                     num_pieces: num_pieces,
-                    name: decode_field_as_string(m, "name")?,
+                    name: name,
                     length: length.parse::<u64>().unwrap(),
                 };
                 Ok(info)

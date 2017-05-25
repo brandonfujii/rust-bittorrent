@@ -14,24 +14,23 @@ pub struct Connection {
     peer: Peer,
     torrent: Torrent,
     have: Vec<bool>,
-    am_i_choked: bool,
-    am_i_interested: bool,
-    are_they_choked: bool,
-    are_they_interested: bool,
+    client_choked: bool,
+    client_interested: bool,
+    peer_choked: bool,
+    peer_interested: bool,
 }
 
 impl Connection {
-    #[allow(dead_code)]
     pub fn new(peer: Peer, stream: TcpStream, t: Torrent) -> Result<(), Error> {
         let num_pieces = t.metainfo.info.num_pieces;
         let mut c = Connection {
             stream: stream,
             peer: peer,
             torrent: t,
-            am_i_choked: false,
-            am_i_interested: false,
-            are_they_choked: false,
-            are_they_interested: false,
+            client_choked: false,
+            client_interested: false,
+            peer_choked: false,
+            peer_interested: false,
             have: vec![false; num_pieces as usize],
         };
 
@@ -121,8 +120,8 @@ impl Connection {
                 try!(self.send_interested());
             },
             Message::Unchoke => {
-                if self.am_i_choked {
-                    self.am_i_choked = false;
+                if self.client_choked {
+                    self.client_choked = false;
                 }
                 try!(self.request_next_block());
             }
@@ -141,8 +140,8 @@ impl Connection {
     }
 
     fn send_interested(&mut self) -> Result<(), Error> {
-        if self.am_i_interested == false {
-            self.am_i_interested = true;
+        if self.client_interested == false {
+            self.client_interested = true;
             try!(self.send_message(Message::Interested));
         }
         Ok(())
