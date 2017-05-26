@@ -64,10 +64,9 @@ impl Piece {
                 println!("Piece {} is complete and correct, writing to the file.", self.index);
                 let offset = self.index as u64 * self.piece_length as u64;
                 try!(file.seek(io::SeekFrom::Start(offset)));
-                let f = file.write_all(&data);
+                try!(file.write_all(&data));
                 self.clear_block_data();
                 self.is_complete = true;
-                println!("Piece written");
             } else {
                 println!("Piece is corrupt, deleting downloaded piece data!");
                 println!("Expected {:?}", self.hash);
