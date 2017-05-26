@@ -11,27 +11,21 @@ static BLOCK_SIZE: u32 = 16384; // 2^14
 #[derive(Debug)]
 pub struct Connection {
     stream: TcpStream,
+    client: Peer,
     peer: Peer,
     torrent: Torrent,
-    have: Vec<bool>,
-    client_choked: bool,
-    client_interested: bool,
-    peer_choked: bool,
-    peer_interested: bool,
 }
 
 impl Connection {
-    pub fn new(peer: Peer, stream: TcpStream, t: Torrent) -> Result<(), Error> {
+    pub fn new(mut client: Peer, mut peer: Peer, stream: TcpStream, t: Torrent) -> Result<(), Error> {
         let num_pieces = t.pieces.len();
+        client.register(num_pieces);
+        peer.register(num_pieces);
         let mut c = Connection {
             stream: stream,
+            client: client,
             peer: peer,
             torrent: t,
-            client_choked: false,
-            client_interested: false,
-            peer_choked: false,
-            peer_interested: false,
-            have: vec![false; num_pieces as usize],
         };
 
         let _ = c.initiate_handshake();
@@ -49,10 +43,10 @@ impl Connection {
         Ok(())
     }
 
-    pub fn connect(peer: Peer, t: Torrent) {
+    pub fn connect(client: Peer, peer: Peer, t: Torrent) {
         println!("Connecting to {}:{}...", peer.ip, peer.port);
         let stream = TcpStream::connect((peer.ip, peer.port)).unwrap();
-        let _ = Connection::new(peer, stream, t);
+        let _ = Connection::new(client, peer, stream, t);
     }
 
     fn initiate_handshake(&mut self) -> Result<(), Error> {
@@ -106,23 +100,24 @@ impl Connection {
         match message {
             Message::KeepAlive => {},
             Message::Bitfield(bytes) => {
-                for i in 0..self.have.len() {
+                let num_pieces = self.client.clone().have.unwrap().len();
+                let mut peer_have = self.peer.have.take().unwrap();
+                for i in 0..num_pieces {
                     let bytes_index = i / 8;
                     let index_into_byte = i % 8;
                     let byte = bytes[bytes_index];
                     let value = (byte & (1 << (7 - index_into_byte))) != 0;
-                    self.have[i] = value;
+                    peer_have[i] = value;
                 };
+                self.peer.have = Some(peer_have);
                 try!(self.send_interested());
             },
             Message::Have(have_index) => {
-                self.have[have_index as usize] = true;
+                self.client.clone().have.unwrap()[have_index as usize] = true;
                 try!(self.send_interested());
             },
             Message::Unchoke => {
-                if self.client_choked {
-                    self.client_choked = false;
-                }
+                self.client.choked = Some(false);
                 try!(self.request_next_block());
             }
             Message::Piece(piece_index, offset, data) => {
@@ -140,15 +135,15 @@ impl Connection {
     }
 
     fn send_interested(&mut self) -> Result<(), Error> {
-        if self.client_interested == false {
-            self.client_interested = true;
+        if self.client.interested.unwrap() == false {
+            self.client.interested = Some(true);
             try!(self.send_message(Message::Interested));
         }
         Ok(())
     }
 
     fn request_next_block(&mut self) -> Result<(), Error> {
-        match self.torrent.next_block_to_request(&self.have) {
+        match self.torrent.next_block_to_request(&self.peer.clone().have.unwrap()) {
             Some((piece_index, block_index, block_length)) => {
                 let offset = block_index * BLOCK_SIZE;
                 self.send_message(Message::Request(piece_index, offset, block_length))

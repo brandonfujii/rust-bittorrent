@@ -1,6 +1,6 @@
 use metainfo::MetaInfo;
 use piece::Piece;
-use std::fs::File;
+use std::fs::{File, OpenOptions};
 use std::path::Path;
 use std::io::Error;
 
@@ -22,10 +22,11 @@ impl Torrent {
         let path = Path::new(&filename);
 
         if !path.exists() {
-            let _ = File::create(path);
+            let f = File::create(path).unwrap();
+            let _ = f.set_len(metainfo.info.length);
         }
 
-        let file = File::open(path).unwrap();
+        let file = OpenOptions::new().write(true).open(path).unwrap();
         let mut pieces: Vec<Piece> = vec![];
         let n = metainfo.info.pieces.len();
 
@@ -78,6 +79,7 @@ impl Torrent {
                 return false
             }
         }
+        println!("Torrent is complete");
         true
     }
 }

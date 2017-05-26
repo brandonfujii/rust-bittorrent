@@ -26,5 +26,6 @@ pub fn main() {
 
     let peers = tracker::retrieve_peers(&m, "tovatovatovatovatova", "8080").unwrap();
     let torrent = torrent::Torrent::new(m);
-    let _ = connection::Connection::connect(peers[0].clone(), torrent);
+    let client = peer::Peer::from_bytes(&[127, 0, 0, 1, 31, 144]);
+    let _ = connection::Connection::connect(client, peers[0].clone(), torrent);
 }

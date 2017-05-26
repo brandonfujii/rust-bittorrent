@@ -3,7 +3,10 @@ use std::net::Ipv4Addr;
 #[derive(Debug, PartialEq, Clone)]
 pub struct Peer {
     pub ip: Ipv4Addr,
-    pub port: u16
+    pub port: u16,
+    pub have: Option<Vec<bool>>,
+    pub choked: Option<bool>,
+    pub interested: Option<bool>,
 }
 
 /// Represents a peer from which a client can request data
@@ -13,7 +16,27 @@ impl Peer {
         let port = v[4] as u16 * 256 + v[5] as u16;
         Peer {
             ip: ip,
-            port: port
+            port: port,
+            have: None,
+            choked: None,
+            interested: None
+        }
+    }
+
+    pub fn register(&mut self, pieces: usize) {
+        match self.have {
+            None => self.have = Some(vec![false; pieces]),
+            _ => {}
+        }
+
+        match self.choked {
+            None => self.choked = Some(false),
+            _ => {}
+        }
+
+        match self.interested {
+            None => self.interested = Some(false),
+            _ => {}
         }
     }
 }
