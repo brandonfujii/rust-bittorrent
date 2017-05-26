@@ -24,11 +24,7 @@ impl FromBencode for TrackerResponse {
                 let interval = decode_field_as_string(m, "interval")?;
                 let complete = decode_field_as_string(m, "complete")?;
                 let incomplete = decode_field_as_string(m, "incomplete")?;
-                let mut peers_bytes = decode_field_as_bytes(m, "peers")?;
-
-                if let Some(i) = peers_bytes.iter().position(|&b| b == 58) {
-                    peers_bytes = peers_bytes.split_off(i).split_off(1);
-                }
+                let peers_bytes = decode_field_as_content_bytes(m, "peers")?;
 
                 let mut peers = vec![];
                 for i in 0..(peers_bytes.len() / 6) {

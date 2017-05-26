@@ -22,7 +22,7 @@ pub struct Connection {
 
 impl Connection {
     pub fn new(peer: Peer, stream: TcpStream, t: Torrent) -> Result<(), Error> {
-        let num_pieces = t.metainfo.info.num_pieces;
+        let num_pieces = t.pieces.len();
         let mut c = Connection {
             stream: stream,
             peer: peer,

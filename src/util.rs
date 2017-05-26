@@ -41,6 +41,16 @@ pub fn decode_field_as_bytes(map: &BTreeMap<ByteString, Bencode>, field: &str) -
     }
 }
 
+pub fn decode_field_as_content_bytes(map: &BTreeMap<ByteString, Bencode>, field: &str) -> Result<Vec<u8>, Error> {
+    if let Ok(mut contents) = decode_field_as_bytes(&map, field) {
+        if let Some(i) = contents.iter().position(|&b| b == 58) {
+            return Ok(contents.split_off(i).split_off(1));
+        }
+    }
+
+    Err(Error::FieldNotFound)
+}
+
 /// Finds a value in the BTreeMap corresponding to a given key and returns a Result containing
 ///     1) a String of the data, if it exists
 ///     2) a FieldNotFound error otherwise

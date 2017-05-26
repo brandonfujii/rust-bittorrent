@@ -48,7 +48,6 @@ impl Piece {
 
     pub fn store(&mut self, file: &mut File, block_index: u32, data: Vec<u8>) -> Result<(), Error> {
         {
-            // store data in the appropriate block
             let block = &mut self.blocks[block_index as usize];
             block.data = Some(data);
         }
@@ -70,6 +69,8 @@ impl Piece {
                 self.is_complete = true;
             } else {
                 println!("Piece is corrupt, deleting downloaded piece data!");
+                println!("Expected {:?}", self.hash);
+                println!("Got {:?}", hash::sha(&data));
                 self.clear_block_data();
             }
         }

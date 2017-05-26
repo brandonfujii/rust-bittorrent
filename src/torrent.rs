@@ -9,7 +9,7 @@ pub struct Torrent {
     pub metainfo: MetaInfo,
     pub peer_id: String,
     file: File,
-    pieces: Vec<Piece>,
+    pub pieces: Vec<Piece>,
 }
 
 /// Represents the entire torrent, including metainfo derived from the `.torrent` file as well as
@@ -27,7 +27,7 @@ impl Torrent {
 
         let file = File::open(path).unwrap();
         let mut pieces: Vec<Piece> = vec![];
-        let n = ((num_pieces as f64)/20.).ceil() as usize;
+        let n = metainfo.info.pieces.len();
 
         for i in 0..n {
             let length = {

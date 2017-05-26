@@ -67,7 +67,7 @@ impl FromBencode for Info {
     fn from_bencode(bencode: &bencode::Bencode) -> Result<Info, Error> {
         match bencode {
             &Bencode::Dict(ref m) => {
-                let pieces_bytes = decode_field_as_bytes(m, "pieces")?;
+                let pieces_bytes = decode_field_as_content_bytes(m, "pieces")?;
                 let pieces: Vec<Vec<u8>> = pieces_bytes.chunks(20).map(|v| v.to_owned()).collect();
                 let num_pieces = pieces.len() as u32;
                 let length = decode_field_as_string(m, "length")?;
