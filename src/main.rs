@@ -29,13 +29,14 @@ pub fn main() {
 
     let peers = tracker::retrieve_peers(&m, "tovatovatovatovatova", "8080").unwrap();
     let torrent = torrent::Torrent::new(m);
-    let mut torrent_arc = Arc::new(Mutex::new(torrent));
+    let torrent_mutex = Arc::new(Mutex::new(torrent));
     let client = peer::Peer::from_bytes(&[127, 0, 0, 1, 31, 144]);
 
     let _ = peers.into_iter().map(|peer| {
-    	let mut p = &mut peer;
-    	let _ = thread::spawn(move || {
-    		let _ = connection::Connection::connect(client, p, torrent_arc);
+    	let torrent_mutex = torrent_mutex.clone();
+    	thread::spawn(move || {
+    		let p = peer;
+    		let _ = connection::Connection::connect(client, p, torrent_mutex);
 	    });
     });
 }

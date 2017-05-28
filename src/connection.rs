@@ -20,16 +20,20 @@ pub struct Connection {
 }
 
 impl Connection {
-    pub fn new(mut client: Peer, mut peer: &mut Peer, stream: TcpStream, torrent_arc: Arc<Mutex<Torrent>>) -> Result<(), Error> {
-        let mut t = torrent_arc.lock().unwrap();
-        let num_pieces = t.pieces.len();
+    pub fn new(mut client: Peer, mut peer: Peer, stream: TcpStream, torrent_mutex: Arc<Mutex<Torrent>>) -> Result<(), Error> {
+        
+        let num_pieces = {
+            let t = torrent_mutex.lock().unwrap();
+            t.pieces.len()
+        }; 
+
         client.register(num_pieces);
         peer.register(num_pieces);
         let mut c = Connection {
             stream: stream,
             client: client,
-            peer: *peer,
-            torrent: torrent_arc,
+            peer: peer,
+            torrent: torrent_mutex,
         };
 
         let _ = c.initiate_handshake();
@@ -47,23 +51,26 @@ impl Connection {
         Ok(())
     }
 
-    pub fn connect(client: Peer, peer: &mut Peer, torrent_arc: Arc<Mutex<Torrent>>) {
+    pub fn connect(client: Peer, peer: Peer, torrent_mutex: Arc<Mutex<Torrent>>) {
         println!("Connecting to {}:{}...", peer.ip, peer.port);
         let stream = TcpStream::connect((peer.ip, peer.port)).unwrap();
-        let _ = Connection::new(client, peer, stream, torrent_arc);
+        let _ = Connection::new(client, peer, stream, torrent_mutex);
     }
 
     fn initiate_handshake(&mut self) -> Result<(), Error> {
         let mut message = vec![];
-        let mut t = self.torrent.lock().unwrap();
 
-        message.push(PROTOCOL.len() as u8);
-        message.extend(PROTOCOL.bytes());
-        message.extend(vec![0;8].into_iter());
-        message.extend(t.metainfo.info_hash.iter().cloned());
-        message.extend(t.peer_id.bytes());
-        try!(self.stream.write_all(&message));
-        Ok(())
+        {
+            let t = self.torrent.lock().unwrap();
+
+            message.push(PROTOCOL.len() as u8);
+            message.extend(PROTOCOL.bytes());
+            message.extend(vec![0;8].into_iter());
+            message.extend(t.metainfo.info_hash.iter().cloned());
+            message.extend(t.peer_id.bytes());
+            try!(self.stream.write_all(&message));
+            Ok(())
+        }
     }
 
     fn receive_handshake(&mut self) -> Result<(), Error> {
@@ -127,13 +134,15 @@ impl Connection {
                 try!(self.request_next_block());
             },
             Message::Piece(piece_index, offset, data) => {
-                let mut t = self.torrent.lock().unwrap();
-                let block_index = offset / BLOCK_SIZE;
-                let is_complete = try!(t.store(piece_index, block_index, data));
-                if is_complete {
-                    return Ok(true)
-                } else {
-                    try!(self.request_next_block());
+                {
+                    let mut t = self.torrent.lock().unwrap();
+                    let block_index = offset / BLOCK_SIZE;
+                    let is_complete = try!(t.store(piece_index, block_index, data));
+                    if is_complete {
+                        return Ok(true)
+                    } else {
+                        try!(self.request_next_block());
+                    }
                 }
             }
             _ => panic!("Need to process message: {:?}", message)
@@ -150,15 +159,17 @@ impl Connection {
     }
 
     fn request_next_block(&mut self) -> Result<(), Error> {
-        let mut t = self.torrent.lock().unwrap();
-        match t.next_block_to_request(&self.peer.clone().have.unwrap()) {
-            Some((piece_index, block_index, block_length)) => {
-                let offset = block_index * BLOCK_SIZE;
-                self.send_message(Message::Request(piece_index, offset, block_length))
-            },
-            None => {
-                println!("We've downloaded all the pieces we can from this peer.");
-                Ok(())
+        {
+            let t = self.torrent.lock().unwrap();
+            match t.next_block_to_request(&self.peer.clone().have.unwrap()) {
+                Some((piece_index, block_index, block_length)) => {
+                    let offset = block_index * BLOCK_SIZE;
+                    self.send_message(Message::Request(piece_index, offset, block_length))
+                },
+                None => {
+                    println!("We've downloaded all the pieces we can from this peer.");
+                    Ok(())
+                }
             }
         }
     }
