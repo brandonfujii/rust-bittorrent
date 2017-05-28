@@ -4,6 +4,7 @@ use bencode::util::ByteString;
 use regex::Regex;
 use std::io::Cursor;
 use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
+use rand::{thread_rng, Rng};
 
 #[derive(Debug)]
 pub enum Error {
@@ -72,4 +73,10 @@ pub fn u32_to_bytes(integer: u32) -> Vec<u8> {
     let mut bytes = vec![];
     bytes.write_u32::<BigEndian>(integer).unwrap();
     bytes
+}
+
+// Azureus-style peer_id formatting
+pub fn create_peer_id() -> String {
+    let random_chars: String = thread_rng().gen_ascii_chars().take(12).collect();
+    format!("{}{}", "-AZ2060-", random_chars)
 }

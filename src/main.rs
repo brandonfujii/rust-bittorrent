@@ -4,8 +4,11 @@ extern crate regex;
 extern crate urlencoding;
 extern crate url;
 extern crate byteorder;
+extern crate rand;
 
 use std::env;
+use std::sync::{Arc, Mutex};
+use std::thread;
 
 mod metainfo;
 mod tracker;
@@ -26,6 +29,13 @@ pub fn main() {
 
     let peers = tracker::retrieve_peers(&m, "tovatovatovatovatova", "8080").unwrap();
     let torrent = torrent::Torrent::new(m);
+    let mut torrent_arc = Arc::new(Mutex::new(torrent));
     let client = peer::Peer::from_bytes(&[127, 0, 0, 1, 31, 144]);
-    let _ = connection::Connection::connect(client, peers[0].clone(), torrent);
+
+    let _ = peers.into_iter().map(|peer| {
+    	let mut p = &mut peer;
+    	let _ = thread::spawn(move || {
+    		let _ = connection::Connection::connect(client, p, torrent_arc);
+	    });
+    });
 }
