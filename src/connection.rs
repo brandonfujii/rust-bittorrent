@@ -1,10 +1,11 @@
 use peer::Peer;
 use torrent::Torrent;
-use std::net::TcpStream;
+use std::net::SocketAddr;
 use std::sync::{Arc, Mutex};
 use std::io::{Read, Write, Error, ErrorKind};
 use util::{bytes_to_u32};
 use message::Message;
+use mio::tcp::TcpStream;
 
 const PROTOCOL: &'static str = "BitTorrent protocol";
 const BLOCK_SIZE: u32 = 16384; // 2^14
@@ -40,9 +41,10 @@ impl Connection {
 
     pub fn connect(client_mutex: Arc<Mutex<Peer>>, peer: Peer, torrent_mutex: Arc<Mutex<Torrent>>) {
         println!("Connecting to {}:{}...", peer.ip, peer.port);
-        match TcpStream::connect((peer.ip, peer.port)) {
+        let addr = SocketAddr::new(peer.ip, peer.port);
+        match TcpStream::connect(&addr) {
             Ok(stream) => {
-                println!("Connected successfully");
+                println!("Connected successfully to {:?}:{:?}", peer.ip, peer.port);
                 let mut c = Connection::new(client_mutex, peer, stream, torrent_mutex);
                 let _ = c.initiate_handshake();
                 println!("Sent handshake");

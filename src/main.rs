@@ -5,6 +5,7 @@ extern crate urlencoding;
 extern crate url;
 extern crate byteorder;
 extern crate rand;
+extern crate mio;
 
 use std::{env, thread};
 use std::sync::{Arc, Mutex};
