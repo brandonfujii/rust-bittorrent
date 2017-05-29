@@ -134,15 +134,16 @@ impl Connection {
                 try!(self.request_next_block());
             },
             Message::Piece(piece_index, offset, data) => {
-                {
+                let is_complete = {
                     let mut t = self.torrent.lock().unwrap();
                     let block_index = offset / BLOCK_SIZE;
-                    let is_complete = try!(t.store(piece_index, block_index, data));
-                    if is_complete {
-                        return Ok(true)
-                    } else {
-                        try!(self.request_next_block());
-                    }
+                    try!(t.store(piece_index, block_index, data))                    
+                };
+                
+                if is_complete {
+                    return Ok(true)
+                } else {
+                    try!(self.request_next_block());
                 }
             }
             _ => panic!("Need to process message: {:?}", message)
@@ -159,17 +160,19 @@ impl Connection {
     }
 
     fn request_next_block(&mut self) -> Result<(), Error> {
-        {
+        let next_block = {
             let t = self.torrent.lock().unwrap();
-            match t.next_block_to_request(&self.peer.clone().have.unwrap()) {
-                Some((piece_index, block_index, block_length)) => {
-                    let offset = block_index * BLOCK_SIZE;
-                    self.send_message(Message::Request(piece_index, offset, block_length))
-                },
-                None => {
-                    println!("We've downloaded all the pieces we can from this peer.");
-                    Ok(())
-                }
+            t.next_block_to_request(&self.peer.clone().have.unwrap())
+        };
+
+        match next_block {
+            Some((piece_index, block_index, block_length)) => {
+                let offset = block_index * BLOCK_SIZE;
+                self.send_message(Message::Request(piece_index, offset, block_length))
+            },
+            None => {
+                println!("We've downloaded all the pieces we can from this peer.");
+                Ok(())
             }
         }
     }
