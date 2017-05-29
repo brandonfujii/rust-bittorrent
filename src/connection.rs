@@ -2,11 +2,9 @@ use peer::Peer;
 use torrent::Torrent;
 use std::net::TcpStream;
 use std::sync::{Arc, Mutex};
-use std::thread;
 use std::io::{Read, Write, Error, ErrorKind};
 use util::{bytes_to_u32};
 use message::Message;
-
 
 const PROTOCOL: &'static str = "BitTorrent protocol";
 const BLOCK_SIZE: u32 = 16384; // 2^14
@@ -14,24 +12,27 @@ const BLOCK_SIZE: u32 = 16384; // 2^14
 #[derive(Debug)]
 pub struct Connection {
     stream: TcpStream,
-    client: Peer,
+    client: Arc<Mutex<Peer>>,
     peer: Peer,
     torrent: Arc<Mutex<Torrent>>,
 }
 
 impl Connection {
-    pub fn new(mut client: Peer, mut peer: Peer, stream: TcpStream, torrent_mutex: Arc<Mutex<Torrent>>) -> Result<(), Error> {
-        
+    pub fn new(client_mutex: Arc<Mutex<Peer>>, mut peer: Peer, stream: TcpStream, torrent_mutex: Arc<Mutex<Torrent>>) -> Result<(), Error> {
         let num_pieces = {
             let t = torrent_mutex.lock().unwrap();
             t.pieces.len()
-        }; 
+        };
 
-        client.register(num_pieces);
-        peer.register(num_pieces);
+        {
+            let mut client = client_mutex.lock().unwrap();
+            client.register(num_pieces);
+            peer.register(num_pieces);
+        }
+
         let mut c = Connection {
             stream: stream,
-            client: client,
+            client: client_mutex,
             peer: peer,
             torrent: torrent_mutex,
         };
@@ -51,10 +52,15 @@ impl Connection {
         Ok(())
     }
 
-    pub fn connect(client: Peer, peer: Peer, torrent_mutex: Arc<Mutex<Torrent>>) {
+    pub fn connect(client_mutex: Arc<Mutex<Peer>>, peer: Peer, torrent_mutex: Arc<Mutex<Torrent>>) {
         println!("Connecting to {}:{}...", peer.ip, peer.port);
-        let stream = TcpStream::connect((peer.ip, peer.port)).unwrap();
-        let _ = Connection::new(client, peer, stream, torrent_mutex);
+        match TcpStream::connect((peer.ip, peer.port)) {
+            Ok(stream) => {
+                println!("Connected successfully");
+                let _ = Connection::new(client_mutex, peer, stream, torrent_mutex);
+            }
+            _ => println!("Failed to connect")
+        }
     }
 
     fn initiate_handshake(&mut self) -> Result<(), Error> {
@@ -113,31 +119,40 @@ impl Connection {
         match message {
             Message::KeepAlive => {},
             Message::Bitfield(bytes) => {
-                let num_pieces = self.client.clone().have.unwrap().len();
-                let mut peer_have = self.peer.have.take().unwrap();
-                for i in 0..num_pieces {
-                    let bytes_index = i / 8;
-                    let index_into_byte = i % 8;
-                    let byte = bytes[bytes_index];
-                    let value = (byte & (1 << (7 - index_into_byte))) != 0;
-                    peer_have[i] = value;
-                };
-                self.peer.have = Some(peer_have);
+                {
+                    let client = self.client.lock().unwrap().clone();
+                    let num_pieces = client.have.unwrap().len();
+                    let mut peer_have = self.peer.have.take().unwrap();
+                    for i in 0..num_pieces {
+                        let bytes_index = i / 8;
+                        let index_into_byte = i % 8;
+                        let byte = bytes[bytes_index];
+                        let value = (byte & (1 << (7 - index_into_byte))) != 0;
+                        peer_have[i] = value;
+                    };
+                    self.peer.have = Some(peer_have);
+                }
                 try!(self.send_interested());
             },
             Message::Have(have_index) => {
-                self.client.clone().have.unwrap()[have_index as usize] = true;
+                {
+                    let client = self.client.lock().unwrap().clone();
+                    client.have.unwrap()[have_index as usize] = true;
+                }
                 try!(self.send_interested());
             },
             Message::Unchoke => {
-                self.client.choked = Some(false);
+                {
+                    let mut client = self.client.lock().unwrap();
+                    client.choked = Some(false);
+                }
                 try!(self.request_next_block());
             },
             Message::Piece(piece_index, offset, data) => {
                 let is_complete = {
                     let mut t = self.torrent.lock().unwrap();
                     let block_index = offset / BLOCK_SIZE;
-                    try!(t.store(piece_index, block_index, data))                    
+                    try!(t.store(piece_index, block_index, data))
                 };
 
                 if is_complete {
@@ -152,8 +167,16 @@ impl Connection {
     }
 
     fn send_interested(&mut self) -> Result<(), Error> {
-        if self.client.interested.unwrap() == false {
-            self.client.interested = Some(true);
+        let flag;
+        {
+            let client = self.client.lock().unwrap();
+            flag = client.interested.unwrap();
+        }
+        if !flag {
+            {
+                let mut client = self.client.lock().unwrap();
+                client.interested = Some(true);
+            }
             try!(self.send_message(Message::Interested));
         }
         Ok(())

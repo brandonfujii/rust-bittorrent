@@ -24,6 +24,7 @@ impl Peer {
     }
 
     pub fn register(&mut self, pieces: usize) {
+        println!("registering");
         match self.have {
             None => self.have = Some(vec![false; pieces]),
             _ => {}
