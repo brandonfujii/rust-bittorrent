@@ -18,7 +18,7 @@ pub struct Connection {
 }
 
 impl Connection {
-    pub fn new(client_mutex: Arc<Mutex<Peer>>, mut peer: Peer, stream: TcpStream, torrent_mutex: Arc<Mutex<Torrent>>) -> Result<(), Error> {
+    pub fn new(client_mutex: Arc<Mutex<Peer>>, mut peer: Peer, stream: TcpStream, torrent_mutex: Arc<Mutex<Torrent>>) -> Self {
         let num_pieces = {
             let t = torrent_mutex.lock().unwrap();
             t.pieces.len()
@@ -30,26 +30,12 @@ impl Connection {
             peer.register(num_pieces);
         }
 
-        let mut c = Connection {
+        Connection {
             stream: stream,
             client: client_mutex,
             peer: peer,
             torrent: torrent_mutex,
-        };
-
-        let _ = c.initiate_handshake();
-        println!("Sent handshake");
-        let _ = c.receive_handshake();
-        println!("Received handshake");
-
-        let mut done = false;
-        while !done {
-            let message = try!(c.receive_message());
-            println!("Received: {:?}", message);
-            done = try!(c.process(message));
         }
-
-        Ok(())
     }
 
     pub fn connect(client_mutex: Arc<Mutex<Peer>>, peer: Peer, torrent_mutex: Arc<Mutex<Torrent>>) {
@@ -57,7 +43,18 @@ impl Connection {
         match TcpStream::connect((peer.ip, peer.port)) {
             Ok(stream) => {
                 println!("Connected successfully");
-                let _ = Connection::new(client_mutex, peer, stream, torrent_mutex);
+                let mut c = Connection::new(client_mutex, peer, stream, torrent_mutex);
+                let _ = c.initiate_handshake();
+                println!("Sent handshake");
+                let _ = c.receive_handshake();
+                println!("Received handshake");
+
+                let mut done = false;
+                while !done {
+                    let message = c.receive_message().unwrap();
+                    println!("Received: {:?}", message);
+                    done = c.process(message).unwrap();
+                }
             }
             _ => println!("Failed to connect")
         }

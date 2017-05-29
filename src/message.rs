@@ -11,8 +11,8 @@ pub enum Message {
     Bitfield(Vec<u8>),
     Request(u32, u32, u32),
     Piece(u32, u32, Vec<u8>),
-    Cancel,  // TODO Add params
-    Port,    // TODO Add params
+    Cancel,
+    Port,
 }
 
 impl Message {

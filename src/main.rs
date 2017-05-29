@@ -41,7 +41,6 @@ pub fn main() {
         })
     }).collect();
 
-    // wait for peers to complete
     for t in threads {
         t.join().unwrap();
     }
