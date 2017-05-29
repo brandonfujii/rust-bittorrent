@@ -6,9 +6,9 @@ extern crate url;
 extern crate byteorder;
 extern crate rand;
 
-use std::env;
+use std::{env, thread};
 use std::sync::{Arc, Mutex};
-use std::thread;
+use std::thread::JoinHandle;
 
 mod metainfo;
 mod tracker;
@@ -33,11 +33,16 @@ pub fn main() {
     let torrent_mutex = Arc::new(Mutex::new(torrent));
     let client_mutex = Arc::new(Mutex::new(peer::Peer::from_bytes(&[127, 0, 0, 1, 31, 144])));
 
-    let _ = peers.into_iter().map(|peer| {
+    let threads: Vec<JoinHandle<()>> = peers.into_iter().map(|peer| {
         let torrent_mutex = torrent_mutex.clone();
         let client_mutex = client_mutex.clone();
-        let _ = thread::spawn(move || {
+        thread::spawn(move || {
             let _ = connection::Connection::connect(client_mutex, peer, torrent_mutex);
-        });
-    }).collect::<Vec<_>>();
+        })
+    }).collect();
+
+    // wait for peers to complete
+    for t in threads {
+        t.join().unwrap();
+    }
 }
