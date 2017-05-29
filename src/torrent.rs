@@ -15,7 +15,7 @@ pub struct Torrent {
 /// Represents the entire torrent, including metainfo derived from the `.torrent` file as well as
 /// the client's id, the file to be downloaded and the pieces of the file
 impl Torrent {
-    pub fn new(metainfo: MetaInfo) -> Self {
+    pub fn new(peer_id: String, metainfo: MetaInfo) -> Self {
         let filename = metainfo.clone().info.name;
         let piece_length = metainfo.info.piece_length;
         let num_pieces = metainfo.info.num_pieces;
@@ -45,7 +45,7 @@ impl Torrent {
 
         Torrent {
             metainfo: metainfo,
-            peer_id: String::from("tovatovatovatovatova"),
+            peer_id: peer_id,
             file: file,
             pieces: pieces,
         }
@@ -128,7 +128,7 @@ mod torrent_tests {
         let _ = File::create(path);
         let f = File::open(path).unwrap();
 
-        let t = Torrent::new(m.clone());
+        let t = Torrent::new("tovatovatovatovatova", m.clone());
         assert_eq!(t, Torrent {
             metainfo: m,
             peer_id: String::from("tovatovatovatovatova"),

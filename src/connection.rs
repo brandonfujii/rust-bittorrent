@@ -9,7 +9,7 @@ use message::Message;
 
 
 const PROTOCOL: &'static str = "BitTorrent protocol";
-static BLOCK_SIZE: u32 = 16384; // 2^14
+const BLOCK_SIZE: u32 = 16384; // 2^14
 
 #[derive(Debug)]
 pub struct Connection {
@@ -139,7 +139,7 @@ impl Connection {
                     let block_index = offset / BLOCK_SIZE;
                     try!(t.store(piece_index, block_index, data))                    
                 };
-                
+
                 if is_complete {
                     return Ok(true)
                 } else {
