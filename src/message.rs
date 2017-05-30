@@ -74,7 +74,6 @@ impl Message {
             Message::Port => payload.push(9),
         };
 
-        // prepend size
         let mut size = u32_to_bytes(payload.len() as u32);
         size.extend(payload);
         size

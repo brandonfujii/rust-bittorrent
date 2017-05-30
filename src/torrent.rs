@@ -1,8 +1,10 @@
 use metainfo::MetaInfo;
+use ipc::IpcMessage;
 use piece::Piece;
 use std::fs::{File, OpenOptions};
 use std::path::Path;
 use std::io::Error;
+use std::sync::mpsc::{Sender};
 
 #[derive(Debug)]
 pub struct Torrent {
@@ -10,6 +12,7 @@ pub struct Torrent {
     pub peer_id: String,
     file: File,
     pub pieces: Vec<Piece>,
+    peer_channels: Vec<Sender<IpcMessage>>,
 }
 
 /// Represents the entire torrent, including metainfo derived from the `.torrent` file as well as
@@ -48,6 +51,7 @@ impl Torrent {
             peer_id: peer_id,
             file: file,
             pieces: pieces,
+            peer_channels: vec![]
         }
     }
 
@@ -56,6 +60,11 @@ impl Torrent {
             let piece = &mut self.pieces[piece_index as usize];
             try!(piece.store(&mut self.file, block_index, data));
         }
+
+        for channel in self.peer_channels.iter() {
+            let _ = channel.send(IpcMessage::CancelRequest(piece_index, block_index));
+        }
+
         Ok(self.is_complete())
     }
 
@@ -81,6 +90,10 @@ impl Torrent {
         }
         println!("Torrent is complete");
         true
+    }
+
+    pub fn register_peer(&mut self, channel: Sender<IpcMessage>) {
+        self.peer_channels.push(channel);
     }
 }
 

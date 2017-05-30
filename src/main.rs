@@ -22,6 +22,7 @@ mod piece;
 mod torrent;
 mod connection;
 mod message;
+mod ipc;
 
 pub fn main() {
     let args: Vec<String> = env::args().collect();

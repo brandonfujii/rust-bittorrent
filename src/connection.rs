@@ -1,11 +1,12 @@
 use peer::Peer;
 use torrent::Torrent;
-use std::net::SocketAddr;
+use std::net::{TcpStream, SocketAddr};
 use std::sync::{Arc, Mutex};
 use std::io::{Read, Write, Error, ErrorKind};
 use util::{bytes_to_u32};
 use message::Message;
-use mio::tcp::TcpStream;
+use ipc::IpcMessage;
+use std::sync::mpsc::{channel, Receiver};
 
 const PROTOCOL: &'static str = "BitTorrent protocol";
 const BLOCK_SIZE: u32 = 16384; // 2^14
@@ -16,6 +17,7 @@ pub struct Connection {
     client: Arc<Mutex<Peer>>,
     peer: Peer,
     torrent: Arc<Mutex<Torrent>>,
+    channel: Receiver<IpcMessage>,
 }
 
 impl Connection {
@@ -31,11 +33,18 @@ impl Connection {
             peer.register(num_pieces);
         }
 
+        let (tx, rx) = channel::<IpcMessage>();
+        {
+            let mut torrent = torrent_mutex.lock().unwrap();
+            torrent.register_peer(tx);
+        }
+
         Connection {
             stream: stream,
             client: client_mutex,
             peer: peer,
             torrent: torrent_mutex,
+            channel: rx
         }
     }
 
@@ -44,7 +53,7 @@ impl Connection {
         let addr = SocketAddr::new(peer.ip, peer.port);
         match TcpStream::connect(&addr) {
             Ok(stream) => {
-                println!("Connected successfully to {:?}:{:?}", peer.ip, peer.port);
+                println!("Connected successfully to {}:{}", peer.ip, peer.port);
                 let mut c = Connection::new(client_mutex, peer, stream, torrent_mutex);
                 let _ = c.initiate_handshake();
                 println!("Sent handshake");
@@ -53,9 +62,10 @@ impl Connection {
 
                 let mut done = false;
                 while !done {
+                    let _ = c.check_messages();
                     let message = c.receive_message().unwrap();
                     println!("Received: {:?}", message);
-                    done = c.process(message).unwrap();
+                    done = c.handle_message(message).unwrap();
                 }
             }
             _ => println!("Failed to connect")
@@ -99,7 +109,9 @@ impl Connection {
 
     fn read_n(&mut self, bytes_to_read: u32) -> Result<Vec<u8>, Error> {
         let mut buf = vec![];
-        let bytes_read = (&mut self.stream).take(bytes_to_read as u64).read_to_end(&mut buf);
+        let stream = &mut self.stream;
+        let mut take = stream.take(bytes_to_read as u64);
+        let bytes_read = take.read_to_end(&mut buf);
         match bytes_read {
             Ok(n) => {
                 if (n as u32) == bytes_to_read {
@@ -114,7 +126,7 @@ impl Connection {
         }
     }
 
-    fn process(&mut self, message: Message) -> Result<bool, Error>{
+    fn handle_message(&mut self, message: Message) -> Result<bool, Error>{
         match message {
             Message::KeepAlive => {},
             Message::Bitfield(bytes) => {
@@ -203,5 +215,23 @@ impl Connection {
         println!("Sending: {:?}", message);
         try!(self.stream.write_all(&message.serialize()));
         Ok(())
+    }
+
+    fn check_messages(&mut self) -> Result<(), Error> {
+        loop {
+            match self.channel.try_recv() {
+                Ok(message) => return self.handle_ipc(message),
+                Err(_) => break
+            }
+        }
+        Ok(())
+    }
+
+    fn handle_ipc(&mut self, message: IpcMessage) -> Result<(), Error> {
+        match message {
+            IpcMessage::CancelRequest(piece_index, block_index) => {
+                return Ok(())
+            }
+        }
     }
 }
