@@ -141,7 +141,7 @@ mod torrent_tests {
         let _ = File::create(path);
         let f = File::open(path).unwrap();
 
-        let t = Torrent::new("tovatovatovatovatova", m.clone());
+        let t = Torrent::new(String::from("tovatovatovatovatova"), m.clone());
         assert_eq!(t, Torrent {
             metainfo: m,
             peer_id: String::from("tovatovatovatovatova"),
@@ -153,7 +153,8 @@ mod torrent_tests {
                 blocks: vec![Block::new(0, 3)],
                 hash: vec![1, 2, 3],
                 is_complete: false,
-            }]
+            }],
+            peer_channels: vec![]
         });
 
         let _ = fs::remove_file(path);

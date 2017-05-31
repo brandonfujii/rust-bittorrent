@@ -44,15 +44,18 @@ impl Peer {
 #[cfg(test)]
 mod peer_tests {
     use super::Peer;
-    use std::net::Ipv4Addr;
+    use std::net::{IpAddr, Ipv4Addr};
 
     #[test]
     fn peer_from_bytes_test() {
         let bytes = [127, 0, 0, 1, 31, 144];
         let p = Peer::from_bytes(&bytes);
         assert_eq!(p, Peer {
-            ip: Ipv4Addr::new(127, 0, 0, 1),
-            port: 8080
+            ip: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
+            port: 8080,
+            have: None,
+            choked: None,
+            interested: None,
         })
     }
 }
