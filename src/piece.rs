@@ -6,9 +6,13 @@ use hash;
 
 static BLOCK_SIZE: u32 = 16384; // 2^14
 
+/// Represents a Piece of the file to be downloaded, where a Piece is made of many Blocks
 #[derive(Debug, PartialEq)]
 pub struct Piece {
+    // represents the length of this piece
     pub length: u32,
+    // represents the length of a "normal" piece; all pieces except the last piece should have this
+    // length (the last piece can have any length less than or equal to this length)
     pub piece_length: u32,
     pub index: u32,
     pub blocks: Vec<Block>,
@@ -24,13 +28,13 @@ impl Piece {
         let num_blocks = ((length as f64) / (BLOCK_SIZE as f64)).ceil() as u32;
 
         for i in 0..num_blocks {
-            let block_length;
-
-            if i < num_blocks - 1 {
-                block_length = BLOCK_SIZE;
-            } else {
-                block_length = length - (BLOCK_SIZE * (num_blocks - 1));
-            }
+            let block_length = {
+                if i < num_blocks - 1 {
+                    BLOCK_SIZE
+                } else {
+                    length - (BLOCK_SIZE * (num_blocks - 1))
+                }
+            };
 
             let block = Block::new(i, block_length);
             blocks.push(block);
