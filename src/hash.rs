@@ -2,6 +2,15 @@ extern crate sha1;
 
 use self::sha1::Sha1;
 
+/// Takes an array of bytes a performs a Sha1 hash on it,
+/// returning the generated hash as a vector of bytes
+///
+/// # Example
+///
+/// ```
+/// let hash: Vec<u8> = sha("hello world".as_bytes());
+/// assert_eq!(hash, vec![42, 174, 108, 53, 201, 79, 207, 180, 21, 219, 233, 95, 64, 139, 156, 233, 30, 232, 70, 237]);
+/// ```
 pub fn sha(b: &[u8]) -> Vec<u8> {
     let mut m = Sha1::new();
     m.update(b);

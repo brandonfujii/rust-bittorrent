@@ -227,6 +227,7 @@ impl Connection {
         Ok(())
     }
 
+    #[allow(unused_variables)]
     fn handle_ipc(&mut self, message: IpcMessage) -> Result<(), Error> {
         match message {
             IpcMessage::CancelRequest(piece_index, block_index) => {
