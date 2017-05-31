@@ -51,6 +51,7 @@ impl FromBencode for MetaInfo {
 #[derive(Debug, Clone, PartialEq)]
 pub struct Info {
     pub piece_length: u32,
+    // an array of sha1 hashes which we will use to verify that the downloads were not corrupted
     pub pieces: Vec<Vec<u8>>,
     pub num_pieces: u32,
     pub name: String,
