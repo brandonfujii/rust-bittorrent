@@ -1,6 +1,7 @@
 use::std::fmt;
 use util::{bytes_to_u32, u32_to_bytes};
 
+#[derive(PartialEq)]
 pub enum Message {
     KeepAlive,
     Choke,
@@ -15,6 +16,11 @@ pub enum Message {
     Port,
 }
 
+/// Constructs messages to be passed between peers. Messages are structured as arrays of bytes:
+/// where bytes:
+///     1-4 represent the length of the message as a u32
+///     5 holds the id of the message
+///     6-* contains the payload
 impl Message {
     pub fn new(id: &u8, body: &[u8]) -> Message {
         match *id {
@@ -65,7 +71,7 @@ impl Message {
                 payload.extend(u32_to_bytes(amount).into_iter());
             },
             Message::Piece(index, offset, data) => {
-                payload.push(6);
+                payload.push(7);
                 payload.extend(u32_to_bytes(index).into_iter());
                 payload.extend(u32_to_bytes(offset).into_iter());
                 payload.extend(data);
@@ -95,5 +101,94 @@ impl fmt::Debug for Message {
              Message::Cancel => write!(f, "Cancel"),
              Message::Port => write!(f, "Port"),
         }
+    }
+}
+
+#[cfg(test)]
+mod block_tests {
+    use super::Message;
+
+    #[test]
+    fn make_and_serialize_message_test() {
+        let mut msg = Message::new(&0, &[]);
+        assert_eq!(msg, Message::Choke);
+        assert_eq!(msg.serialize(), vec![
+            0, 0, 0, 1,
+            0,
+        ]);
+
+        msg = Message::new(&1, &[]);
+        assert_eq!(msg, Message::Unchoke);
+        assert_eq!(msg.serialize(), vec![
+            0, 0, 0, 1,
+            1,
+        ]);
+
+        msg = Message::new(&2, &[]);
+        assert_eq!(msg, Message::Interested);
+        assert_eq!(msg.serialize(), vec![
+            0, 0, 0, 1,
+            2,
+        ]);
+
+        msg = Message::new(&3, &[]);
+        assert_eq!(msg, Message::NotInterested);
+        assert_eq!(msg.serialize(), vec![
+            0, 0, 0, 1,
+            3,
+        ]);
+
+        msg = Message::new(&4, &[0, 0, 1, 1]);
+        assert_eq!(msg, Message::Have(257));
+        assert_eq!(msg.serialize(), vec![
+            0, 0, 0, 5,
+            4,
+            0, 0, 1, 1,
+        ]);
+
+        msg = Message::new(&5, &[0, 0, 1, 1]);
+        assert_eq!(msg, Message::Bitfield(vec![0, 0, 1, 1]));
+        assert_eq!(msg.serialize(), vec![
+            0, 0, 0, 5,
+            5,
+            0, 0, 1, 1,
+        ]);
+
+        msg = Message::new(&6, &[0, 0, 1, 1, 0, 0, 1, 2, 0, 0, 1, 3]);
+        assert_eq!(msg, Message::Request(257, 258, 259));
+        assert_eq!(msg.serialize(), vec![
+            0, 0, 0, 13,
+            6,
+            0, 0, 1, 1,
+            0, 0, 1, 2,
+            0, 0, 1, 3,
+        ]);
+
+        msg = Message::new(&7, &[0, 0, 1, 1, 0, 0, 1, 2, 0, 0, 1, 3, 4, 5]);
+        assert_eq!(msg, Message::Piece(257, 258, vec![0, 0, 1, 3, 4, 5]));
+        assert_eq!(msg.serialize(), vec![
+            0, 0, 0, 15,
+            7,
+            0, 0, 1, 1,
+            0, 0, 1, 2,
+            0, 0, 1, 3, 4, 5,
+        ]);
+
+        msg = Message::new(&8, &[]);
+        assert_eq!(msg, Message::Cancel);
+        assert_eq!(msg.serialize(), vec![
+            0, 0, 0, 1,
+            8,
+        ]);
+
+        msg = Message::new(&9, &[]);
+        assert_eq!(msg, Message::Port);
+        assert_eq!(msg.serialize(), vec![
+            0, 0, 0, 1,
+            9,
+        ]);
+
+        msg = Message::KeepAlive;
+        assert_eq!(msg.serialize(), vec![0, 0, 0, 0]);
     }
 }
