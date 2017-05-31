@@ -105,7 +105,7 @@ impl fmt::Debug for Message {
 }
 
 #[cfg(test)]
-mod block_tests {
+mod message_tests {
     use super::Message;
 
     #[test]

@@ -235,3 +235,28 @@ impl Connection {
         }
     }
 }
+
+#[cfg(test)]
+mod connection_tests {
+    #[test]
+    fn create_connection_test() {
+        use metainfo;
+        use tracker;
+        use peer::Peer;
+        use torrent::Torrent;
+        use std::net::SocketAddr;
+        use std::sync::{Arc, Mutex};
+        use util::create_peer_id;
+
+        let f: String = String::from("data/flagfromserver.torrent");
+        let m = metainfo::from_file(&f).unwrap();
+        let peer_id: String = create_peer_id();
+
+        let peers = tracker::retrieve_peers(&m, &peer_id, "8080").unwrap();
+        let ref peer = peers[0];
+        let torrent = Torrent::new(peer_id, m);
+        let _ = Arc::new(Mutex::new(torrent));
+        let _ = Arc::new(Mutex::new(Peer::from_bytes(&[127, 0, 0, 1, 31, 144])));
+        let _ = SocketAddr::new(peer.ip, peer.port);
+    }
+}
