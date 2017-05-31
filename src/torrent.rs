@@ -55,6 +55,9 @@ impl Torrent {
         }
     }
 
+    /// Given a piece index, block index, a vector of bytes for a block, we store
+    /// the new block at its position within the piece and return whether or not 
+    /// the piece is complete to determine if we should keep requesting blocks
     pub fn store(&mut self, piece_index: u32, block_index: u32, data: Vec<u8>) -> Result<bool, Error> {
         {
             let piece = &mut self.pieces[piece_index as usize];
@@ -68,6 +71,10 @@ impl Torrent {
         Ok(self.is_complete())
     }
 
+
+    /// Loops through pieces and checks if peer has requested piece 
+    /// If so, it returns the next block's information in a triple of
+    /// the piece length, the block index, and the block length
     pub fn next_block_to_request(&self, peer_has_pieces: &[bool]) -> Option<(u32, u32, u32)> {
         for piece in self.pieces.iter() {
             if peer_has_pieces[piece.index as usize] {
@@ -82,6 +89,8 @@ impl Torrent {
         None
     }
 
+    /// Returns a boolean that represents whether all the pieces for the 
+    /// torrent has been retrieved 
     fn is_complete(&self) -> bool {
         for piece in self.pieces.iter() {
             if !piece.is_complete {
@@ -118,6 +127,7 @@ mod torrent_tests {
     use std::fs::File;
     use std::path::Path;
     use std::fs;
+    use util::create_peer_id;
 
     #[test]
     fn make_torrent_test() {
@@ -140,11 +150,12 @@ mod torrent_tests {
         let path = Path::new(&filename);
         let _ = File::create(path);
         let f = File::open(path).unwrap();
+        let peer_id = create_peer_id();
 
-        let t = Torrent::new(String::from("tovatovatovatovatova"), m.clone());
+        let t = Torrent::new(peer_id.clone(), m.clone());
         assert_eq!(t, Torrent {
             metainfo: m,
-            peer_id: String::from("tovatovatovatovatova"),
+            peer_id: peer_id,
             file: f,
             pieces: vec![Piece {
                 length: 3,
