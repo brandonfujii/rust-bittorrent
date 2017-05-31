@@ -58,4 +58,19 @@ mod peer_tests {
             interested: None,
         })
     }
+
+    #[test]
+    fn register_test() {
+        let bytes = [127, 0, 0, 1, 31, 144];
+        let mut p = Peer::from_bytes(&bytes);
+
+        p.register(32);
+        assert_eq!(p, Peer {
+            ip: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
+            port: 8080,
+            have: Some(vec![false; 32]),
+            choked: Some(false),
+            interested: Some(false),
+        })
+    }
 }

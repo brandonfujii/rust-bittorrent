@@ -87,6 +87,7 @@ impl Piece {
                 return Some(block)
             }
         }
+
         None
     }
 
@@ -122,5 +123,61 @@ mod piece_tests {
             hash: vec![1, 2, 3],
             is_complete: false,
         });
+    }
+
+    #[test]
+    fn next_block_test() {
+        let mut p = Piece::new(256, 4, 4, vec![1, 2, 3]);
+        assert_eq!(p.next_block_to_request(), Some(&Block {
+            index: 0,
+            length: 256,
+            data: None
+        }));
+
+        p.is_complete = true;
+        assert_eq!(p.next_block_to_request(), None);
+    }
+
+    #[test]
+    fn have_all_blocks_test() {
+        let mut p = Piece::new(256, 4, 4, vec![1, 2, 3]);
+        assert_eq!(p.have_all_blocks(), false);
+
+        p = Piece {
+            length: 256,
+            piece_length: 4,
+            index: 4,
+            blocks: vec![Block {
+                index: 12,
+                length: 12,
+                data: Some(vec![])
+            }],
+            hash: vec![1, 2, 3],
+            is_complete: false,
+        };
+        assert_eq!(p.have_all_blocks(), true);
+    }
+
+    #[test]
+    fn clear_block_data_test() {
+        let mut p = Piece {
+            length: 256,
+            piece_length: 4,
+            index: 4,
+            blocks: vec![Block {
+                index: 12,
+                length: 12,
+                data: Some(vec![])
+            }],
+            hash: vec![1, 2, 3],
+            is_complete: false,
+        };
+
+        p.clear_block_data();
+        assert_eq!(p.blocks, vec![Block {
+            index: 12,
+            length: 12,
+            data: None
+        }]);
     }
 }
