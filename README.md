@@ -22,4 +22,4 @@ cargo run <path/to/bittorrent-file>
 
 
 ### What's left to do:
-- [x] Handle multiple concurrent requests to peers
+- [ ] Handle multiple concurrent requests to peers
