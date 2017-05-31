@@ -65,7 +65,7 @@ impl Message {
                 payload.extend(u32_to_bytes(amount).into_iter());
             },
             Message::Piece(index, offset, data) => {
-                payload.push(6);
+                payload.push(7);
                 payload.extend(u32_to_bytes(index).into_iter());
                 payload.extend(u32_to_bytes(offset).into_iter());
                 payload.extend(data);

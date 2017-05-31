@@ -75,8 +75,16 @@ pub fn u32_to_bytes(integer: u32) -> Vec<u8> {
     bytes
 }
 
-// Azureus-style peer_id formatting
+/// Generates an Azuerus-formatted 20-byte peer id, in which 
+/// the id is formatted as follows: -{client implementation}{version}-{random ascii characters}
+/// # Example
+/// ```
+/// let peer_id = create_peer_id();
+/// assert_eq!(peer_id, peer_id.as_bytes().len());
+/// ```
 pub fn create_peer_id() -> String {
     let random_chars: String = thread_rng().gen_ascii_chars().take(12).collect();
     format!("{}{}", "-AZ2060-", random_chars)
 }
+
+
