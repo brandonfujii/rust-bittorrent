@@ -1,63 +1,91 @@
 use peer::Peer;
 use torrent::Torrent;
-use std::net::TcpStream;
+use std::net::{TcpStream, SocketAddr};
+use std::sync::{Arc, Mutex};
 use std::io::{Read, Write, Error, ErrorKind};
 use util::{bytes_to_u32};
 use message::Message;
+use ipc::IpcMessage;
+use std::sync::mpsc::{channel, Receiver};
 
 const PROTOCOL: &'static str = "BitTorrent protocol";
-static BLOCK_SIZE: u32 = 16384; // 2^14
+const BLOCK_SIZE: u32 = 16384; // 2^14
 
 #[derive(Debug)]
 pub struct Connection {
     stream: TcpStream,
-    client: Peer,
+    client: Arc<Mutex<Peer>>,
     peer: Peer,
-    torrent: Torrent,
+    torrent: Arc<Mutex<Torrent>>,
+    channel: Receiver<IpcMessage>,
 }
 
 impl Connection {
-    pub fn new(mut client: Peer, mut peer: Peer, stream: TcpStream, t: Torrent) -> Result<(), Error> {
-        let num_pieces = t.pieces.len();
-        client.register(num_pieces);
-        peer.register(num_pieces);
-        let mut c = Connection {
-            stream: stream,
-            client: client,
-            peer: peer,
-            torrent: t,
+    pub fn new(client_mutex: Arc<Mutex<Peer>>, mut peer: Peer, stream: TcpStream, torrent_mutex: Arc<Mutex<Torrent>>) -> Self {
+        let num_pieces = {
+            let t = torrent_mutex.lock().unwrap();
+            t.pieces.len()
         };
 
-        let _ = c.initiate_handshake();
-        println!("Sent handshake");
-        let _ = c.receive_handshake();
-        println!("Received handshake");
-
-        let mut done = false;
-        while !done {
-            let message = try!(c.receive_message());
-            println!("Received: {:?}", message);
-            done = try!(c.process(message));
+        {
+            let mut client = client_mutex.lock().unwrap();
+            client.register(num_pieces);
+            peer.register(num_pieces);
         }
 
-        Ok(())
+        let (tx, rx) = channel::<IpcMessage>();
+        {
+            let mut torrent = torrent_mutex.lock().unwrap();
+            torrent.register_peer(tx);
+        }
+
+        Connection {
+            stream: stream,
+            client: client_mutex,
+            peer: peer,
+            torrent: torrent_mutex,
+            channel: rx
+        }
     }
 
-    pub fn connect(client: Peer, peer: Peer, t: Torrent) {
+    pub fn connect(client_mutex: Arc<Mutex<Peer>>, peer: Peer, torrent_mutex: Arc<Mutex<Torrent>>) {
         println!("Connecting to {}:{}...", peer.ip, peer.port);
-        let stream = TcpStream::connect((peer.ip, peer.port)).unwrap();
-        let _ = Connection::new(client, peer, stream, t);
+        let addr = SocketAddr::new(peer.ip, peer.port);
+        match TcpStream::connect(&addr) {
+            Ok(stream) => {
+                println!("Connected successfully to {}:{}", peer.ip, peer.port);
+                let mut c = Connection::new(client_mutex, peer, stream, torrent_mutex);
+                let _ = c.initiate_handshake();
+                println!("Sent handshake");
+                let _ = c.receive_handshake();
+                println!("Received handshake");
+
+                let mut done = false;
+                while !done {
+                    let _ = c.check_messages();
+                    let message = c.receive_message().unwrap();
+                    println!("Received: {:?}", message);
+                    done = c.handle_message(message).unwrap();
+                }
+            }
+            _ => println!("Failed to connect")
+        }
     }
 
     fn initiate_handshake(&mut self) -> Result<(), Error> {
         let mut message = vec![];
-        message.push(PROTOCOL.len() as u8);
-        message.extend(PROTOCOL.bytes());
-        message.extend(vec![0;8].into_iter());
-        message.extend(self.torrent.metainfo.info_hash.iter().cloned());
-        message.extend(self.torrent.peer_id.bytes());
-        try!(self.stream.write_all(&message));
-        Ok(())
+
+        {
+            let t = self.torrent.lock().unwrap();
+
+            message.push(PROTOCOL.len() as u8);
+            message.extend(PROTOCOL.bytes());
+            message.extend(vec![0;8].into_iter());
+            message.extend(t.metainfo.info_hash.iter().cloned());
+            message.extend(t.peer_id.bytes());
+            try!(self.stream.write_all(&message));
+            Ok(())
+        }
     }
 
     fn receive_handshake(&mut self) -> Result<(), Error> {
@@ -81,7 +109,9 @@ impl Connection {
 
     fn read_n(&mut self, bytes_to_read: u32) -> Result<Vec<u8>, Error> {
         let mut buf = vec![];
-        let bytes_read = (&mut self.stream).take(bytes_to_read as u64).read_to_end(&mut buf);
+        let stream = &mut self.stream;
+        let mut take = stream.take(bytes_to_read as u64);
+        let bytes_read = take.read_to_end(&mut buf);
         match bytes_read {
             Ok(n) => {
                 if (n as u32) == bytes_to_read {
@@ -96,33 +126,46 @@ impl Connection {
         }
     }
 
-    fn process(&mut self, message: Message) -> Result<bool, Error>{
+    fn handle_message(&mut self, message: Message) -> Result<bool, Error>{
         match message {
             Message::KeepAlive => {},
             Message::Bitfield(bytes) => {
-                let num_pieces = self.client.clone().have.unwrap().len();
-                let mut peer_have = self.peer.have.take().unwrap();
-                for i in 0..num_pieces {
-                    let bytes_index = i / 8;
-                    let index_into_byte = i % 8;
-                    let byte = bytes[bytes_index];
-                    let value = (byte & (1 << (7 - index_into_byte))) != 0;
-                    peer_have[i] = value;
-                };
-                self.peer.have = Some(peer_have);
+                {
+                    let client = self.client.lock().unwrap().clone();
+                    let num_pieces = client.have.unwrap().len();
+                    let mut peer_have = self.peer.have.take().unwrap();
+                    for i in 0..num_pieces {
+                        let bytes_index = i / 8;
+                        let index_into_byte = i % 8;
+                        let byte = bytes[bytes_index];
+                        let value = (byte & (1 << (7 - index_into_byte))) != 0;
+                        peer_have[i] = value;
+                    };
+                    self.peer.have = Some(peer_have);
+                }
                 try!(self.send_interested());
             },
             Message::Have(have_index) => {
-                self.client.clone().have.unwrap()[have_index as usize] = true;
+                {
+                    let client = self.client.lock().unwrap().clone();
+                    client.have.unwrap()[have_index as usize] = true;
+                }
                 try!(self.send_interested());
             },
             Message::Unchoke => {
-                self.client.choked = Some(false);
+                {
+                    let mut client = self.client.lock().unwrap();
+                    client.choked = Some(false);
+                }
                 try!(self.request_next_block());
-            }
+            },
             Message::Piece(piece_index, offset, data) => {
-                let block_index = offset / BLOCK_SIZE;
-                let is_complete = try!(self.torrent.store(piece_index, block_index, data));
+                let is_complete = {
+                    let mut t = self.torrent.lock().unwrap();
+                    let block_index = offset / BLOCK_SIZE;
+                    try!(t.store(piece_index, block_index, data))
+                };
+
                 if is_complete {
                     return Ok(true)
                 } else {
@@ -135,15 +178,28 @@ impl Connection {
     }
 
     fn send_interested(&mut self) -> Result<(), Error> {
-        if self.client.interested.unwrap() == false {
-            self.client.interested = Some(true);
+        let flag;
+        {
+            let client = self.client.lock().unwrap();
+            flag = client.interested.unwrap();
+        }
+        if !flag {
+            {
+                let mut client = self.client.lock().unwrap();
+                client.interested = Some(true);
+            }
             try!(self.send_message(Message::Interested));
         }
         Ok(())
     }
 
     fn request_next_block(&mut self) -> Result<(), Error> {
-        match self.torrent.next_block_to_request(&self.peer.clone().have.unwrap()) {
+        let next_block = {
+            let t = self.torrent.lock().unwrap();
+            t.next_block_to_request(&self.peer.clone().have.unwrap())
+        };
+
+        match next_block {
             Some((piece_index, block_index, block_length)) => {
                 let offset = block_index * BLOCK_SIZE;
                 self.send_message(Message::Request(piece_index, offset, block_length))
@@ -159,5 +215,23 @@ impl Connection {
         println!("Sending: {:?}", message);
         try!(self.stream.write_all(&message.serialize()));
         Ok(())
+    }
+
+    fn check_messages(&mut self) -> Result<(), Error> {
+        loop {
+            match self.channel.try_recv() {
+                Ok(message) => return self.handle_ipc(message),
+                Err(_) => break
+            }
+        }
+        Ok(())
+    }
+
+    fn handle_ipc(&mut self, message: IpcMessage) -> Result<(), Error> {
+        match message {
+            IpcMessage::CancelRequest(piece_index, block_index) => {
+                return Ok(())
+            }
+        }
     }
 }

@@ -11,8 +11,8 @@ pub enum Message {
     Bitfield(Vec<u8>),
     Request(u32, u32, u32),
     Piece(u32, u32, Vec<u8>),
-    Cancel,  // TODO Add params
-    Port,    // TODO Add params
+    Cancel,
+    Port,
 }
 
 impl Message {
@@ -74,7 +74,6 @@ impl Message {
             Message::Port => payload.push(9),
         };
 
-        // prepend size
         let mut size = u32_to_bytes(payload.len() as u32);
         size.extend(payload);
         size

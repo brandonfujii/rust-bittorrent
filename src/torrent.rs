@@ -1,8 +1,10 @@
 use metainfo::MetaInfo;
+use ipc::IpcMessage;
 use piece::Piece;
 use std::fs::{File, OpenOptions};
 use std::path::Path;
 use std::io::Error;
+use std::sync::mpsc::{Sender};
 
 #[derive(Debug)]
 pub struct Torrent {
@@ -10,12 +12,13 @@ pub struct Torrent {
     pub peer_id: String,
     file: File,
     pub pieces: Vec<Piece>,
+    peer_channels: Vec<Sender<IpcMessage>>,
 }
 
 /// Represents the entire torrent, including metainfo derived from the `.torrent` file as well as
 /// the client's id, the file to be downloaded and the pieces of the file
 impl Torrent {
-    pub fn new(metainfo: MetaInfo) -> Self {
+    pub fn new(peer_id: String, metainfo: MetaInfo) -> Self {
         let filename = metainfo.clone().info.name;
         let piece_length = metainfo.info.piece_length;
         let num_pieces = metainfo.info.num_pieces;
@@ -45,9 +48,10 @@ impl Torrent {
 
         Torrent {
             metainfo: metainfo,
-            peer_id: String::from("tovatovatovatovatova"),
+            peer_id: peer_id,
             file: file,
             pieces: pieces,
+            peer_channels: vec![]
         }
     }
 
@@ -56,6 +60,11 @@ impl Torrent {
             let piece = &mut self.pieces[piece_index as usize];
             try!(piece.store(&mut self.file, block_index, data));
         }
+
+        for channel in self.peer_channels.iter() {
+            let _ = channel.send(IpcMessage::CancelRequest(piece_index, block_index));
+        }
+
         Ok(self.is_complete())
     }
 
@@ -81,6 +90,10 @@ impl Torrent {
         }
         println!("Torrent is complete");
         true
+    }
+
+    pub fn register_peer(&mut self, channel: Sender<IpcMessage>) {
+        self.peer_channels.push(channel);
     }
 }
 
@@ -128,7 +141,7 @@ mod torrent_tests {
         let _ = File::create(path);
         let f = File::open(path).unwrap();
 
-        let t = Torrent::new(m.clone());
+        let t = Torrent::new("tovatovatovatovatova", m.clone());
         assert_eq!(t, Torrent {
             metainfo: m,
             peer_id: String::from("tovatovatovatovatova"),
