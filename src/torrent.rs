@@ -56,7 +56,7 @@ impl Torrent {
     }
 
     /// Given a piece index, block index, a vector of bytes for a block, we store
-    /// the new block at its position within the piece and return whether or not 
+    /// the new block at its position within the piece and return whether or not
     /// the piece is complete to determine if we should keep requesting blocks
     pub fn store(&mut self, piece_index: u32, block_index: u32, data: Vec<u8>) -> Result<bool, Error> {
         {
@@ -72,7 +72,7 @@ impl Torrent {
     }
 
 
-    /// Loops through pieces and checks if peer has requested piece 
+    /// Loops through pieces and checks if peer has requested piece
     /// If so, it returns the next block's information in a triple of
     /// the piece length, the block index, and the block length
     pub fn next_block_to_request(&self, peer_has_pieces: &[bool]) -> Option<(u32, u32, u32)> {
@@ -89,8 +89,8 @@ impl Torrent {
         None
     }
 
-    /// Returns a boolean that represents whether all the pieces for the 
-    /// torrent has been retrieved 
+    /// Returns a boolean that represents whether all the pieces for the
+    /// torrent has been retrieved
     fn is_complete(&self) -> bool {
         for piece in self.pieces.iter() {
             if !piece.is_complete {

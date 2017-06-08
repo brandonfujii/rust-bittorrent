@@ -17,7 +17,7 @@ pub struct Connection {
     client: Arc<Mutex<Peer>>,
     peer: Peer,
     torrent: Arc<Mutex<Torrent>>,
-    channel: Receiver<IpcMessage>,
+    channel: Receiver<IpcMessage>
 }
 
 impl Connection {
@@ -171,7 +171,10 @@ impl Connection {
                 } else {
                     try!(self.request_next_block());
                 }
-            }
+            },
+            Message::Cancel(_) => {
+                try!(self.request_next_block());
+            },
             _ => panic!("Need to process message: {:?}", message)
         };
         Ok(false)
@@ -230,8 +233,8 @@ impl Connection {
     #[allow(unused_variables)]
     fn handle_ipc(&mut self, message: IpcMessage) -> Result<(), Error> {
         match message {
-            IpcMessage::CancelRequest(piece_index, block_index) => {
-                return Ok(())
+            IpcMessage::CancelRequest(piece_index, _) => {
+                self.send_message(Message::Cancel(piece_index))
             }
         }
     }

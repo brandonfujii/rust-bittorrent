@@ -12,7 +12,7 @@ pub enum Message {
     Bitfield(Vec<u8>),
     Request(u32, u32, u32),
     Piece(u32, u32, Vec<u8>),
-    Cancel,
+    Cancel(u32),
     Port,
 }
 
@@ -42,7 +42,7 @@ impl Message {
                 let data = body[8..].to_owned();
                 Message::Piece(index, offset, data)
             },
-            8 => Message::Cancel,
+            8 => Message::Cancel(bytes_to_u32(body)),
             9 => Message::Port,
             _ => panic!("Bad message id: {}", id)
         }
@@ -76,7 +76,7 @@ impl Message {
                 payload.extend(u32_to_bytes(offset).into_iter());
                 payload.extend(data);
             },
-            Message::Cancel => payload.push(8),
+            Message::Cancel(_) => payload.push(8),
             Message::Port => payload.push(9),
         };
 
@@ -98,7 +98,7 @@ impl fmt::Debug for Message {
              Message::Bitfield(ref bytes) => write!(f, "Bitfield({:?})", bytes),
              Message::Request(ref index, ref offset, ref length) => write!(f, "Request({}, {}, {})", index, offset, length),
              Message::Piece(ref index, ref offset, ref data) => write!(f, "Piece({}, {}, size={})", index, offset, data.len()),
-             Message::Cancel => write!(f, "Cancel"),
+             Message::Cancel(piece_index) => write!(f, "Cancel other requests for piece {}", piece_index),
              Message::Port => write!(f, "Port"),
         }
     }
@@ -174,8 +174,8 @@ mod message_tests {
             0, 0, 1, 3, 4, 5,
         ]);
 
-        msg = Message::new(&8, &[]);
-        assert_eq!(msg, Message::Cancel);
+        msg = Message::new(&8, &[0, 0, 0, 0]);
+        assert_eq!(msg, Message::Cancel(0));
         assert_eq!(msg.serialize(), vec![
             0, 0, 0, 1,
             8,
