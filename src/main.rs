@@ -23,6 +23,7 @@ mod torrent;
 mod connection;
 mod message;
 mod ipc;
+mod listener;
 
 pub fn main() {
     let args: Vec<String> = env::args().collect();
@@ -34,6 +35,8 @@ pub fn main() {
     let torrent = torrent::Torrent::new(peer_id, m);
     let torrent_mutex = Arc::new(Mutex::new(torrent));
     let client_mutex = Arc::new(Mutex::new(peer::Peer::from_bytes(&[127, 0, 0, 1, 31, 144])));
+
+    let _ = listener::start("0.0.0.0", 8080, client_mutex.clone(), torrent_mutex.clone());
 
     let threads: Vec<JoinHandle<()>> = peers.into_iter().map(|peer| {
         let torrent_mutex = torrent_mutex.clone();

@@ -214,7 +214,7 @@ impl Connection {
         }
     }
 
-    fn send_message(&mut self, message: Message) -> Result<(), Error> {
+    pub fn send_message(&mut self, message: Message) -> Result<(), Error> {
         println!("Sending: {:?}", message);
         try!(self.stream.write_all(&message.serialize()));
         Ok(())
